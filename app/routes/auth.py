@@ -16,7 +16,12 @@ from ..auth import (
     purge_expired_sessions,
     verify_password,
 )
-from ..config import PASSWORD_MIN_LEN, REMEMBER_DAYS, SESSION_HOURS
+from ..config import (
+    DEFAULT_ADMIN_USERNAME,
+    PASSWORD_MIN_LEN,
+    REMEMBER_DAYS,
+    SESSION_HOURS,
+)
 from ..db import DbIntegrityError, connect
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -34,13 +39,16 @@ def session_for(user_id: int, remember: bool) -> str:
 
 @router.post("/register", status_code=201)
 def register(body: Credentials):
+    if body.username.lower() == DEFAULT_ADMIN_USERNAME.lower():
+        raise HTTPException(400, "That username is reserved for system administration.")
     salt = new_salt()
     try:
         with connect() as conn:
-            first = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0
-            cur = conn.execute("INSERT INTO users (username, password_hash, salt, role) VALUES (?, ?, ?, ?)",
-                               (body.username, hash_password(body.password, salt), salt, "admin" if first else "user"))
-            user = {"id": cur.lastrowid, "username": body.username, "role": "admin" if first else "user"}
+            cur = conn.execute(
+                "INSERT INTO users (username, password_hash, salt, role) VALUES (?, ?, ?, 'user')",
+                (body.username, hash_password(body.password, salt), salt)
+            )
+            user = {"id": cur.lastrowid, "username": body.username, "role": "user"}
     except DbIntegrityError:
         raise HTTPException(409, "That username is taken. Pick another one.")
     logs.record(user, "register")

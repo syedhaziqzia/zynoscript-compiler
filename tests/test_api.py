@@ -19,7 +19,7 @@ class ApiTests(unittest.TestCase):
     def setUpClass(cls):
         cls.ctx = TestClient(app)
         cls.client = cls.ctx.__enter__()
-        r = cls.client.post("/api/auth/register", json={"username": "admin1", "password": "secret1"})
+        r = cls.client.post("/api/auth/login", json={"username": config.DEFAULT_ADMIN_USERNAME, "password": config.DEFAULT_ADMIN_PASSWORD})
         cls.admin = {"Authorization": "Bearer " + r.json()["token"]}
         r = cls.client.post("/api/auth/register", json={"username": "ali", "password": "secret2"})
         cls.ali = {"Authorization": "Bearer " + r.json()["token"]}
@@ -146,6 +146,17 @@ class ApiTests(unittest.TestCase):
                 os.environ.pop("DATABASE_URL", None)
 
 
+    def test_registration_always_creates_normal_user(self):
+        r = self.client.post("/api/auth/register", json={"username": "normal_dev", "password": "password123"})
+        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.json()["user"]["role"], "user")
+
+    def test_admin_username_registration_rejected(self):
+        r = self.client.post("/api/auth/register", json={"username": config.DEFAULT_ADMIN_USERNAME, "password": "password123"})
+        self.assertEqual(r.status_code, 400)
+
+
 if __name__ == "__main__":
     unittest.main()
+
 

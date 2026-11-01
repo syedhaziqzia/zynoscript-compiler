@@ -238,6 +238,42 @@ def connect():
         conn.close()
 
 
+def seed_admin_user(conn_or_cur, is_pg: bool = False):
+    from .auth import hash_password, new_salt
+    from .config import DEFAULT_ADMIN_PASSWORD, DEFAULT_ADMIN_USERNAME
+
+    try:
+        if is_pg:
+            conn_or_cur.execute("SELECT id FROM users WHERE username = %s", (DEFAULT_ADMIN_USERNAME,))
+            if not conn_or_cur.fetchone():
+                salt = new_salt()
+                pwd_hash = hash_password(DEFAULT_ADMIN_PASSWORD, salt)
+                conn_or_cur.execute(
+                    "INSERT INTO users (username, password_hash, salt, role) VALUES (%s, %s, %s, 'admin')",
+                    (DEFAULT_ADMIN_USERNAME, pwd_hash, salt)
+                )
+            # Demote any accidental admin accounts that are not DEFAULT_ADMIN_USERNAME
+            conn_or_cur.execute(
+                "UPDATE users SET role = 'user' WHERE username != %s AND role = 'admin'",
+                (DEFAULT_ADMIN_USERNAME,)
+            )
+        else:
+            cur = conn_or_cur.execute("SELECT id FROM users WHERE username = ?", (DEFAULT_ADMIN_USERNAME,))
+            if not cur.fetchone():
+                salt = new_salt()
+                pwd_hash = hash_password(DEFAULT_ADMIN_PASSWORD, salt)
+                conn_or_cur.execute(
+                    "INSERT INTO users (username, password_hash, salt, role) VALUES (?, ?, ?, 'admin')",
+                    (DEFAULT_ADMIN_USERNAME, pwd_hash, salt)
+                )
+            conn_or_cur.execute(
+                "UPDATE users SET role = 'user' WHERE username != ? AND role = 'admin'",
+                (DEFAULT_ADMIN_USERNAME,)
+            )
+    except Exception as e:
+        print(f"Warning: seed_admin_user failed: {e}")
+
+
 def init_db():
     db_url = get_database_url()
     if db_url and psycopg2 is not None:
@@ -245,6 +281,7 @@ def init_db():
             with psycopg2.connect(db_url, connect_timeout=10) as conn:
                 with conn.cursor() as cur:
                     cur.execute(PG_SCHEMA)
+                    seed_admin_user(cur, is_pg=True)
                 conn.commit()
             return
         except Exception as e:
@@ -255,7 +292,9 @@ def init_db():
         conn = sqlite3.connect(DB_PATH, timeout=10.0)
         conn.execute("PRAGMA journal_mode = WAL;")
         conn.executescript(SQLITE_SCHEMA)
+        seed_admin_user(conn, is_pg=False)
         conn.commit()
         conn.close()
     except Exception as e:
         print(f"Warning: SQLite schema initialization error: {e}")
+
