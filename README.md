@@ -27,7 +27,7 @@
 
 ---
 
-## 👥 Authors & Credits
+## 👥 Authors & Group Members
 
 This project was developed for our **Compiler Construction Lab Project**:
 
@@ -39,9 +39,9 @@ This project was developed for our **Compiler Construction Lab Project**:
   👉 **[Syed Haziq Zia](https://github.com/syedhaziqzia)**  
   Overall project leadership, backend architecture & REST APIs, cloud database systems (dual SQLite / Neon PostgreSQL), security hardening, interactive laboratory workbench UI/UX, and Vercel cloud deployment.
 
-* **QA, Testing & Verification Support:**  
+* **Quality Assurance & Verification Specialist:**  
   👉 **[Muhammad Noman](https://github.com/Noman-exe)**  
-  Assisted with quality assurance testing and secondary verification of compiler test cases.
+  Conducted pipeline testing, cross-stage integration verification, syntax error boundary checks, and test suite execution to ensure compiler stability and compliance.
 
 ---
 
@@ -242,16 +242,6 @@ zynoscript-compiler/
 ├── requirements.txt             # Minimal Python dependencies
 └── README.md                    # Project documentation
 ```
-
----
-
-## 🎓 Group Members
-
-| # | Member Name | Role / Area of Contribution | GitHub Profile |
-|---|---|---|---|
-| 1 | **Syed Haziq Zia** | **Team Lead** — Full-Stack & Backend Architecture, UI/UX, Security & Cloud Deployment | [@syedhaziqzia](https://github.com/syedhaziqzia) |
-| 2 | **Syed Abdul Ali Naqvi** | **Compiler Lead** — Core Compiler Engines, Grammar Design & Intermediate Code | [@SyedAbdulAliNaqvi](https://github.com/SyedAbdulAliNaqvi) |
-| 3 | **Muhammad Noman** | Documentation & Testing Support | [@Noman-exe](https://github.com/Noman-exe) |
 
 ---
 
