@@ -32,14 +32,5 @@ for module in (auth, grammar, compiler, logs, admin):
 
 STATIC_DIR = ROOT / "public" if (ROOT / "public").exists() else FRONTEND_DIR
 
-
-@app.get("/", response_class=HTMLResponse)
-def serve_index():
-    for candidate in (STATIC_DIR / "index.html", FRONTEND_DIR / "index.html"):
-        if candidate.exists():
-            return HTMLResponse(content=candidate.read_text(encoding="utf-8"))
-    return HTMLResponse("<h1>ZynoScript Studio</h1>")
-
-
 if STATIC_DIR.exists():
     app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="frontend")
