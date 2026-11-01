@@ -281,12 +281,54 @@ function showView(name) {
 }
 
 /* ---------- Authentication ---------- */
+function renderAuthError(message, action = null, actionUser = null) {
+  const errBox = $("#auth-error");
+  if (!errBox) return;
+  if (!message) {
+    errBox.innerHTML = "";
+    errBox.hidden = true;
+    return;
+  }
+
+  errBox.hidden = false;
+  let html = `<span class="form-error-icon" aria-hidden="true">!</span><div class="form-error-body"><span class="form-error-msg">${esc(message)}</span>`;
+
+  if (action === "register") {
+    html += `<button type="button" class="auth-switch-btn" data-switch="register" data-user="${esc(actionUser || '')}">Create account for "${esc(actionUser || '')}" &rarr;</button>`;
+  } else if (action === "login") {
+    html += `<button type="button" class="auth-switch-btn" data-switch="login" data-user="${esc(actionUser || '')}">Sign in as "${esc(actionUser || '')}" &rarr;</button>`;
+  }
+
+  html += `</div>`;
+  errBox.innerHTML = html;
+
+  const switchBtn = errBox.querySelector(".auth-switch-btn");
+  if (switchBtn) {
+    switchBtn.addEventListener("click", () => {
+      const mode = switchBtn.dataset.switch;
+      const user = switchBtn.dataset.user;
+      setAuthMode(mode);
+      if (user) $("#auth-user").value = user;
+      $("#auth-pass").value = "";
+      $("#auth-pass").focus();
+      renderAuthError("");
+    });
+  }
+
+  const card = $(".auth-card");
+  if (card) {
+    card.classList.remove("shake");
+    void card.offsetWidth;
+    card.classList.add("shake");
+  }
+}
+
 function setAuthMode(mode) {
   state.authMode = mode;
   $$(".tab[data-mode]").forEach((t) => t.classList.toggle("is-active", t.dataset.mode === mode));
   $("#auth-submit").textContent = mode === "login" ? "Sign in" : "Create account";
   $("#auth-pass").autocomplete = mode === "login" ? "current-password" : "new-password";
-  $("#auth-error").textContent = "";
+  renderAuthError("");
 }
 
 async function enterApp(user) {
@@ -319,35 +361,62 @@ function leaveApp(message) {
   toggleProfileDropdown(false);
   closeGrammarDrawer();
   showView("auth");
-  if (message) $("#auth-error").textContent = message;
+  if (message) renderAuthError(message);
 }
 
 $("#auth-form").addEventListener("submit", async (e) => {
   e.preventDefault();
+  const userField = $("#auth-user");
+  const passField = $("#auth-pass");
+  const username = userField.value.trim();
+  const password = passField.value;
+
+  // Immediate client-side validation for crisp user feedback
+  if (!username) {
+    renderAuthError("Please enter your username.");
+    userField.focus();
+    return;
+  }
+  if (username.length < 3) {
+    renderAuthError("Username must be at least 3 characters long.");
+    userField.focus();
+    return;
+  }
+  if (!/^[A-Za-z0-9_.-]+$/.test(username)) {
+    renderAuthError("Usernames can only contain letters, numbers, hyphens, dots, and underscores (no spaces).");
+    userField.focus();
+    return;
+  }
+  if (!password) {
+    renderAuthError("Please enter your password.");
+    passField.focus();
+    return;
+  }
+  if (password.length < 6) {
+    renderAuthError("Password must be at least 6 characters long.");
+    passField.focus();
+    return;
+  }
+
   const btn = $("#auth-submit");
   btn.disabled = true;
-  $("#auth-error").textContent = "";
+  renderAuthError("");
   try {
     const remember = $("#auth-remember").checked;
     const res = await Api.post(`/api/auth/${state.authMode}`, {
-      username: $("#auth-user").value.trim(),
-      password: $("#auth-pass").value,
+      username,
+      password,
       remember
     });
     Api.setToken(res.token, remember);
     remember ? localStorage.setItem("zs_user", res.user.username) : localStorage.removeItem("zs_user");
-    $("#auth-pass").value = "";
+    passField.value = "";
     await enterApp(res.user);
   } catch (err) {
-    $("#auth-error").textContent = err.message;
-    const card = $(".auth-card");
-    if (card) {
-      card.classList.remove("shake");
-      void card.offsetWidth;
-      card.classList.add("shake");
-    }
+    renderAuthError(err.message, err.action, err.actionUser || username);
+  } finally {
+    btn.disabled = false;
   }
-  btn.disabled = false;
 });
 
 $$(".tab[data-mode]").forEach((t) => t.addEventListener("click", () => setAuthMode(t.dataset.mode)));

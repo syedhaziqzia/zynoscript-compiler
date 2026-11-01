@@ -17,10 +17,36 @@ const Api = {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
       const d = data.detail;
-      const err = new Error(typeof d === "string" ? d : (d && d.message) || "Something went wrong. Try again.");
+      let msg = "Something went wrong. Try again.";
+      let action = null;
+      let actionUser = null;
+
+      if (typeof d === "string") {
+        msg = d;
+      } else if (d && typeof d.message === "string") {
+        msg = d.message;
+        action = d.action || null;
+        actionUser = d.username || null;
+      } else if (Array.isArray(d)) {
+        msg = d.map(item => {
+          const field = item.loc ? item.loc[item.loc.length - 1] : "Field";
+          const fName = field.charAt(0).toUpperCase() + field.slice(1);
+          if (item.type === "string_too_short") {
+            const min = item.ctx?.min_length || 3;
+            return `${fName} must be at least ${min} characters long`;
+          }
+          if (item.type === "string_pattern_mismatch") {
+            return "Username can only contain letters, numbers, dots, hyphens, and underscores";
+          }
+          return item.msg ? `${fName}: ${item.msg}` : "Invalid field value";
+        }).join(". ");
+      }
+
+      const err = new Error(msg);
       err.status = res.status;
+      err.action = action;
+      err.actionUser = actionUser;
       err.problems = d && d.problems;
-      if (Array.isArray(d)) err.message = "Check the highlighted fields: " + d.map(x => x.loc.slice(-1)[0] + " " + x.msg).join("; ");
       throw err;
     }
     return data;

@@ -40,7 +40,10 @@ def session_for(user_id: int, remember: bool) -> str:
 @router.post("/register", status_code=201)
 def register(body: Credentials):
     if body.username.lower() == DEFAULT_ADMIN_USERNAME.lower():
-        raise HTTPException(400, "That username is reserved for system administration.")
+        raise HTTPException(
+            status_code=400,
+            detail=f"The username '{body.username}' is reserved for system administration. Please choose a different username."
+        )
     salt = new_salt()
     try:
         with connect() as conn:
@@ -50,7 +53,14 @@ def register(body: Credentials):
             )
             user = {"id": cur.lastrowid, "username": body.username, "role": "user"}
     except DbIntegrityError:
-        raise HTTPException(409, "That username is taken. Pick another one.")
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "message": f"Username '{body.username}' is already registered. Did you mean to sign in?",
+                "action": "login",
+                "username": body.username
+            }
+        )
     logs.record(user, "register")
     return {"token": session_for(user["id"], body.remember), "user": user}
 
@@ -62,11 +72,25 @@ def login(body: Credentials):
                            (body.username,)).fetchone()
     if row is None:
         dummy_verify(body.password)
-        logs.record(None, "login", "error", "wrong username or password", username=body.username)
-        raise HTTPException(401, "Wrong username or password.")
+        logs.record(None, "login", "error", "user not found", username=body.username)
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "message": f"No account found with username '{body.username}'. Would you like to create one?",
+                "action": "register",
+                "username": body.username
+            }
+        )
     if not verify_password(body.password, row["salt"], row["password_hash"]):
-        logs.record(None, "login", "error", "wrong username or password", username=body.username)
-        raise HTTPException(401, "Wrong username or password.")
+        logs.record(None, "login", "error", "wrong password", username=body.username)
+        raise HTTPException(
+            status_code=401,
+            detail={
+                "message": f"Incorrect password for '{body.username}'. Please check your password and try again.",
+                "action": "retry_password",
+                "username": body.username
+            }
+        )
 
     try:
         purge_expired_sessions()

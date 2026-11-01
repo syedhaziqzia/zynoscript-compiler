@@ -86,7 +86,8 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(self.client.delete(f"/api/admin/users/{admin_id}", headers=self.admin).status_code, 409)
         self.assertEqual(self.client.post(f"/api/admin/users/{admin_id}/role", json={"role": "user"}, headers=self.admin).status_code, 409)
         self.assertEqual(self.client.delete(f"/api/admin/users/{uid}", headers=self.admin).status_code, 200)
-        self.assertEqual(self.client.post("/api/auth/login", json={"username": "temp1", "password": "newsecret"}).status_code, 401)
+        self.assertEqual(self.client.post("/api/auth/login", json={"username": "temp1", "password": "newsecret"}).status_code, 404)
+
 
     def test_logs_scope(self):
         self.client.post("/api/compile/lexical", json={"source": GOOD}, headers=self.ali)
@@ -97,7 +98,15 @@ class ApiTests(unittest.TestCase):
 
     def test_unknown_user_login(self):
         r = self.client.post("/api/auth/login", json={"username": "ghost_user_999", "password": "password123"})
-        self.assertEqual(r.status_code, 401)
+        self.assertEqual(r.status_code, 404)
+        self.assertIn("No account found", r.json()["detail"]["message"])
+        self.assertEqual(r.json()["detail"]["action"], "register")
+
+    def test_duplicate_username_guidance(self):
+        r = self.client.post("/api/auth/register", json={"username": "ali", "password": "anotherpassword"})
+        self.assertEqual(r.status_code, 409)
+        self.assertIn("already registered", r.json()["detail"]["message"])
+        self.assertEqual(r.json()["detail"]["action"], "login")
 
     def test_logs_limit_clamped(self):
         # Negative limit should be clamped to at least 1, not cause unrestricted dump

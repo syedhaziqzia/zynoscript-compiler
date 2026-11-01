@@ -11,7 +11,7 @@
 <p align="center">
   <a href="#features"><img src="https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white" alt="Python Version"/></a>
   <a href="#features"><img src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI"/></a>
-  <a href="#testing"><img src="https://img.shields.io/badge/Tests-32%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
+  <a href="#testing"><img src="https://img.shields.io/badge/Tests-33%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
   <a href="#production-deployment"><img src="https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel&logoColor=white" alt="Vercel"/></a>
   <a href="#production-deployment"><img src="https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=white" alt="Neon Postgres"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT"/></a>

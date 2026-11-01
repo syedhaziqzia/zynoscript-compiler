@@ -651,10 +651,68 @@ code { background: var(--bg-muted); border: 1px solid var(--line); padding: 2px 
 }
 
 .auth-card .form-error {
-  color: var(--bad);
-  font-size: 13.5px;
-  margin: 0;
-  min-height: 1.4em;
+  display: none;
+  background: var(--bad-bg);
+  border: 1px solid var(--bad-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #991b1b;
+  margin: 0 0 14px;
+  align-items: flex-start;
+  gap: 10px;
+  box-sizing: border-box;
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-card .form-error:not(:empty) {
+  display: flex;
+}
+
+.form-error-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 11px;
+  flex: none;
+  margin-top: 1px;
+}
+
+.form-error-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.form-error-msg {
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+.auth-switch-btn {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: #09090b;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.15s ease;
+  margin-top: 2px;
+}
+
+.auth-switch-btn:hover {
+  opacity: 0.7;
 }
 
 .auth-card .btn.block {
@@ -1571,16 +1629,277 @@ dialog form {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Responsive */
+/* Responsive Enhancements: Mobile & Tablet */
 @media (max-width: 960px) {
-  .topbar { padding: 0 16px; flex-wrap: wrap; height: auto; padding: 10px 16px; gap: 10px; }
+  .topbar { padding: 0 16px; height: 56px; }
   .brand-tag { display: none; }
   .auth { padding: 32px 16px; min-height: auto; }
-  .auth-container { grid-template-columns: 1fr; gap: 36px; }
+  .auth-container { grid-template-columns: 1fr; gap: 32px; max-width: 580px; margin: 0 auto; }
   .studio-view { height: auto; padding: 12px; }
-  .studio-grid { grid-template-columns: 1fr; }
-  .editor-pane .code-editor { height: 380px; }
+  .studio-grid { grid-template-columns: 1fr; gap: 16px; }
+  .editor-pane .code-editor { height: 360px; }
   .guide-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 640px) {
+  /* Topbar Mobile */
+  .topbar {
+    height: 52px;
+    padding: 0 12px;
+    gap: 8px;
+  }
+  .topbar-left { gap: 10px; }
+  .topbar-right { gap: 8px; }
+  .brand img { height: 18px; }
+  .nav-pills { padding: 2px; gap: 2px; }
+  .nav-btn { padding: 4px 10px; font-size: 12px; }
+  .cmd-k-kbd, .cmd-k-label { display: none; }
+  .cmd-trigger-btn { padding: 6px 8px; }
+  .profile-btn { padding: 3px; }
+  .avatar { width: 28px; height: 28px; font-size: 12px; }
+
+  /* Auth Screen on Phones */
+  .auth {
+    padding: 20px 12px 32px;
+    align-items: flex-start;
+  }
+  .auth-container {
+    gap: 20px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .auth-hero {
+    text-align: center;
+    padding: 10px 4px 0;
+  }
+  .auth-hero .hero-logo {
+    height: 32px;
+    margin: 0 auto 12px;
+  }
+  .auth-hero h1 {
+    font-size: 24px;
+    line-height: 1.25;
+    margin-bottom: 8px;
+    letter-spacing: -0.03em;
+  }
+  .auth-hero .lead {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--ink-secondary);
+    margin-bottom: 14px;
+  }
+  .hero-pipeline-preview {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding: 4px 2px;
+    justify-content: flex-start;
+  }
+  .hero-pipeline-preview::-webkit-scrollbar { display: none; }
+  .hero-pipeline-preview .h-stage {
+    font-size: 11px;
+    padding: 3px 8px;
+    white-space: nowrap;
+    flex: none;
+  }
+  .hero-pipeline-preview .h-arrow {
+    display: none;
+  }
+  /* On phones, hide the giant decorative code preview so the login box is front and center */
+  .hero-code-card {
+    display: none;
+  }
+
+  /* Auth Card Mobile */
+  .auth-card {
+    padding: 22px 18px;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background: #ffffff;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.07);
+    margin: 0 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+  .auth-card-head { margin-bottom: 16px; }
+  .auth-title { font-size: 22px; }
+  .auth-card .muted { font-size: 13px; }
+  .auth-seg { margin-bottom: 18px; }
+  .auth-seg .tab { padding: 9px 12px; font-size: 14px; }
+  .auth-card label { font-size: 13px; gap: 6px; }
+  .auth-card input {
+    height: 46px;
+    font-size: 15px;
+    padding: 0 14px;
+    border-radius: 10px;
+  }
+  .auth-card .pw-wrap input {
+    padding-right: 64px;
+  }
+  .auth-card .pw-toggle {
+    right: 12px;
+    font-size: 12.5px;
+  }
+  .auth-card .btn.block {
+    height: 48px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    border-radius: 12px;
+    margin-top: 6px;
+  }
+
+  /* Workbench Studio Mobile */
+  .studio-view {
+    padding: 8px 8px 24px;
+  }
+  .studio-grid {
+    gap: 12px;
+  }
+  .studio-pane {
+    border-radius: 14px;
+  }
+  .pane-header {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pane-header-left { min-width: auto; }
+  .pane-header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .editor-pane .code-editor {
+    height: 280px;
+    min-height: 220px;
+  }
+  .code-textarea {
+    font-size: 13px;
+    padding: 10px 12px;
+  }
+  .code-gutter {
+    font-size: 13px;
+    padding: 10px 6px;
+  }
+  .pane-footer.editor-footer {
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .kbd-hint {
+    display: none;
+  }
+  .inspector-header-flattened {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+  .pipeline {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 6px;
+    padding: 2px 0 6px;
+    scroll-snap-type: x proximity;
+    margin: 0;
+  }
+  .pipeline::-webkit-scrollbar { display: none; }
+  .pipeline li {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+  .stage {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: var(--r-full);
+    white-space: nowrap;
+    gap: 6px;
+  }
+  .stage-num { font-size: 10px; }
+  .inspector-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 8px;
+  }
+  .inspector-header-actions .tool-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  .run-all-btn {
+    flex: 1;
+    height: 38px;
+    font-size: 13px;
+    font-weight: 600;
+    justify-content: center;
+  }
+  .inspector-content {
+    padding: 12px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Tables inside Output */
+  .inspector-content table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    font-size: 12px;
+  }
+  .inspector-content th, .inspector-content td {
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+
+  /* Slide-Over Grammar Drawer on Phones (Bottom Sheet) */
+  .drawer-sheet {
+    width: 100%;
+    max-width: 100vw;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    top: auto;
+    max-height: 85vh;
+    border-radius: 20px 20px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line-strong);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+    transform: translateY(100%);
+  }
+  .drawer-sheet:not([hidden]) {
+    transform: translateY(0);
+  }
+  .drawer-header {
+    padding: 16px 16px 12px;
+  }
+  .drawer-title { font-size: 17px; }
+  .drawer-tabs { padding: 0 16px 10px; }
+  .drawer-tabs .seg { width: 100%; }
+  .drawer-tabs .tab { flex: 1; font-size: 12px; padding: 6px 8px; }
+  .drawer-body { padding: 12px 16px; }
+  .drawer-footer { padding: 12px 16px; }
+
+  /* Guide and Admin views on Mobile */
+  .guide-container { padding: 12px; }
+  .guide-header { flex-direction: column; align-items: stretch; gap: 12px; }
+  .guide-header .btn { width: 100%; text-align: center; justify-content: center; }
+  .admin-view { padding: 12px; }
+  .admin-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+  /* Profile Dropdown on Mobile */
+  .profile-dropdown {
+    right: -4px;
+    width: 240px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+  }
 }
 
 /* =========================================
