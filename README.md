@@ -31,17 +31,17 @@
 
 This project was developed for our **Compiler Construction Lab Project**:
 
-* **Backend Lead & Core Compiler Architecture:**  
+* **Compiler Engine & Core Grammar Lead:**  
   👉 **[Syed Abdul Ali Naqvi](https://github.com/SyedAbdulAliNaqvi)**  
-  Architected the core compiler stages, lexical tokenization, recursive-descent syntax parsing, semantic verification rules, Intermediate Code Generation (Three-Address Code & Quadruple tables), and language specifications.
+  Co-developed core compiler stages, lexical tokenization, recursive-descent syntax parsing, semantic verification rules, Intermediate Code Generation (Three-Address Code & Quadruple tables), and language specifications.
 
-* **Full-Stack Engineering, UI/UX, Security Architecture & Deployment:**  
+* **Team Lead & Full-Stack Architect:**  
   👉 **[Syed Haziq Zia](https://github.com/syedhaziqzia)**  
-  Engineered the modern laboratory IDE interface, visual compiler canvas animations, database architecture (dual SQLite / Neon PostgreSQL), timing-safe cryptographic security, exploit hardening, automated test suite, and Vercel cloud deployment.
+  Overall project leadership, backend architecture & REST APIs, cloud database systems (dual SQLite / Neon PostgreSQL), security hardening, interactive laboratory workbench UI/UX, and Vercel cloud deployment.
 
-* **Quality Assurance, Research & Compiler Verification:**  
+* **QA, Testing & Verification Support:**  
   👉 **[Muhammad Noman](https://github.com/Noman-exe)**  
-  Conducted compiler pipeline testing, grammar validation research, test case verification, and quality assurance across execution stages.
+  Assisted with quality assurance testing and secondary verification of compiler test cases.
 
 ---
 
@@ -249,9 +249,9 @@ zynoscript-compiler/
 
 | # | Member Name | Role / Area of Contribution | GitHub Profile |
 |---|---|---|---|
-| 1 | **Syed Haziq Zia** | Full-Stack Engineering, Studio UI/UX, Security Architecture & Deployment | [@syedhaziqzia](https://github.com/syedhaziqzia) |
-| 2 | **Syed Abdul Ali Naqvi** | Backend Lead, Core Compiler Engines & Grammar Architecture | [@SyedAbdulAliNaqvi](https://github.com/SyedAbdulAliNaqvi) |
-| 3 | **Muhammad Noman** | Quality Assurance, Research & Compiler Verification | [@Noman-exe](https://github.com/Noman-exe) |
+| 1 | **Syed Haziq Zia** | **Team Lead** — Full-Stack & Backend Architecture, UI/UX, Security & Cloud Deployment | [@syedhaziqzia](https://github.com/syedhaziqzia) |
+| 2 | **Syed Abdul Ali Naqvi** | **Compiler Lead** — Core Compiler Engines, Grammar Design & Intermediate Code | [@SyedAbdulAliNaqvi](https://github.com/SyedAbdulAliNaqvi) |
+| 3 | **Muhammad Noman** | Documentation & Testing Support | [@Noman-exe](https://github.com/Noman-exe) |
 
 ---
 
