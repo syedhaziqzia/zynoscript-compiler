@@ -33,7 +33,7 @@ This project was developed for our **Compiler Construction Lab Project**:
 
 * **Compiler Engine & Core Grammar Lead:**  
   👉 **[Syed Abdul Ali Naqvi](https://github.com/SyedAbdulAliNaqvi)**  
-  Co-developed core compiler stages, lexical tokenization, recursive-descent syntax parsing, semantic verification rules, Intermediate Code Generation (Three-Address Code & Quadruple tables), and language specifications.
+Developed core compiler stages, lexical tokenization, recursive-descent syntax parsing, semantic verification rules, Intermediate Code Generation (Three-Address Code & Quadruple tables), and language specifications.
 
 * **Team Lead & Full-Stack Architect:**  
   👉 **[Syed Haziq Zia](https://github.com/syedhaziqzia)**  
