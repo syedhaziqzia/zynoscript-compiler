@@ -2,15 +2,15 @@
   "rewrites": [
     {
       "source": "/api/:match*",
-      "destination": "/api/index.py"
+      "destination": "/api/index.py?__path=:match*"
     },
     {
       "source": "/docs",
-      "destination": "/api/index.py"
+      "destination": "/api/index.py?__path=docs"
     },
     {
       "source": "/openapi.json",
-      "destination": "/api/index.py"
+      "destination": "/api/index.py?__path=openapi.json"
     }
   ]
 }

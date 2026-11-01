@@ -108,6 +108,22 @@ class ApiTests(unittest.TestCase):
         r = self.client.options("/api/logs", headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "GET"})
         self.assertIn(r.headers.get("access-control-allow-origin"), ["*", "http://localhost:3000"])
 
+    def test_vercel_rewrite_path_restoration(self):
+        # 1. Header-based path restoration (x-matched-path)
+        r1 = self.client.post("/api/index.py", json={"username": "ali", "password": "secret2"}, headers={"x-matched-path": "/api/auth/login"})
+        self.assertEqual(r1.status_code, 200)
+        self.assertIn("token", r1.json())
+
+        # 2. Query param path restoration (?__path=...)
+        r2 = self.client.post("/api/index.py?__path=auth/login", json={"username": "ali", "password": "secret2"})
+        self.assertEqual(r2.status_code, 200)
+        self.assertIn("token", r2.json())
+
+    def test_vercel_rewrite_not_found_on_unknown_api(self):
+        r = self.client.post("/api/index.py?__path=unknown_stage", json={})
+        self.assertEqual(r.status_code, 404)
+
 
 if __name__ == "__main__":
     unittest.main()
+

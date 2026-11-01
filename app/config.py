@@ -4,7 +4,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
-DB_PATH = Path(os.getenv("DB_PATH", str(ROOT / "data" / "zynoscript.db")))
+if os.getenv("VERCEL") and not os.getenv("DB_PATH"):
+    DB_PATH = Path("/tmp/zynoscript.db")
+else:
+    DB_PATH = Path(os.getenv("DB_PATH", str(ROOT / "data" / "zynoscript.db")))
 FRONTEND_DIR = ROOT / "frontend"
 
 SESSION_HOURS = int(os.getenv("SESSION_HOURS", "12"))            # how long a login token stays valid
