@@ -40,10 +40,10 @@ def list_users(_admin: dict = Depends(require_admin)):
     with connect() as conn:
         rows = conn.execute(
             "SELECT u.id, u.username, u.role, u.created_at, "
-            "(SELECT COUNT(*) FROM activity_log a WHERE a.user_id = u.id AND a.action LIKE 'run_%') AS runs, "
+            "(SELECT COUNT(*) FROM activity_log a WHERE a.user_id = u.id AND a.action LIKE ?) AS runs, "
             "(SELECT MAX(created_at) FROM activity_log a WHERE a.user_id = u.id) AS last_active, "
             "CASE WHEN u.grammar_json IS NOT NULL THEN 1 ELSE 0 END AS has_custom_grammar "
-            "FROM users u ORDER BY u.id").fetchall()
+            "FROM users u ORDER BY u.id", ("run_%",)).fetchall()
     return {"users": [dict(r) for r in rows]}
 
 
@@ -55,16 +55,19 @@ def get_telemetry(_admin: dict = Depends(require_admin)):
             "(SELECT COUNT(*) FROM users) AS total_users, "
             "(SELECT COUNT(*) FROM users WHERE role = 'admin') AS admin_users, "
             "(SELECT COUNT(*) FROM users WHERE role = 'user') AS regular_users, "
-            "(SELECT COUNT(*) FROM activity_log WHERE action LIKE 'run_%') AS total_runs, "
-            "(SELECT COUNT(*) FROM activity_log WHERE action LIKE 'run_%' AND status = 'ok') AS total_success, "
-            "(SELECT COUNT(*) FROM activity_log WHERE action LIKE 'run_%' AND status = 'error') AS total_errors, "
+            "(SELECT COUNT(*) FROM activity_log WHERE action LIKE ?) AS total_runs, "
+            "(SELECT COUNT(*) FROM activity_log WHERE action LIKE ? AND status = 'ok') AS total_success, "
+            "(SELECT COUNT(*) FROM activity_log WHERE action LIKE ? AND status = 'error') AS total_errors, "
             "(SELECT COUNT(*) FROM sessions) AS active_sessions, "
-            "(SELECT COUNT(*) FROM activity_log) AS total_logs"
+            "(SELECT COUNT(*) FROM activity_log) AS total_logs",
+            ("run_%", "run_%", "run_%")
         ).fetchone()
 
         stage_rows = conn.execute(
-            "SELECT action, COUNT(*) AS count FROM activity_log WHERE action LIKE 'run_%' GROUP BY action"
+            "SELECT action, COUNT(*) AS count FROM activity_log WHERE action LIKE ? GROUP BY action",
+            ("run_%",)
         ).fetchall()
+
 
     breakdown = {
         "lexical": 0,

@@ -229,10 +229,21 @@ class ApiTests(unittest.TestCase):
         self.assertTrue(all(l["username"] == "ali" for l in logs_ali["logs"]))
         self.assertTrue(all(l["status"] == "ok" for l in logs_ali["logs"]))
 
+    def test_pg_cursor_wrapper_no_args(self):
+
+        from unittest.mock import MagicMock
+        from app.db import PgCursorWrapper
+        mock_raw = MagicMock()
+        mock_raw.description = None
+        wrapper = PgCursorWrapper(mock_raw)
+        # Execute query with % and no args - must call mock_raw.execute with 1 arg, never tuple ()
+        wrapper.execute("SELECT * FROM activity_log WHERE action LIKE 'run_%'")
+        mock_raw.execute.assert_called_once_with("SELECT * FROM activity_log WHERE action LIKE 'run_%'")
 
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 

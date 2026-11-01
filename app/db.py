@@ -108,7 +108,10 @@ class PgCursorWrapper:
             if "USERS" in upper or "ACTIVITY_LOG" in upper:
                 pg_sql += " RETURNING id"
 
-        self._cur.execute(pg_sql, args or ())
+        if args:
+            self._cur.execute(pg_sql, tuple(args))
+        else:
+            self._cur.execute(pg_sql)
         if is_insert and self._cur.description:
             row = self._cur.fetchone()
             if row:
