@@ -28,4 +28,6 @@ app.add_middleware(
 
 for module in (auth, grammar, compiler, logs, admin):
     app.include_router(module.router)
-app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+
+if FRONTEND_DIR.exists():
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

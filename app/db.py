@@ -147,6 +147,9 @@ def get_database_url() -> str:
     url = os.getenv("DATABASE_URL", "").strip()
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
+    if url and "sslmode" not in url and ("neon.tech" in url or "supabase" in url):
+        sep = "&" if "?" in url else "?"
+        url += f"{sep}sslmode=require"
     return url
 
 
@@ -154,7 +157,7 @@ def get_database_url() -> str:
 def connect():
     db_url = get_database_url()
     if db_url and psycopg2 is not None:
-        raw_conn = psycopg2.connect(db_url)
+        raw_conn = psycopg2.connect(db_url, connect_timeout=10)
         wrapped = PgConnectionWrapper(raw_conn)
         try:
             yield wrapped
@@ -176,12 +179,18 @@ def connect():
 def init_db():
     db_url = get_database_url()
     if db_url and psycopg2 is not None:
-        with psycopg2.connect(db_url) as conn:
-            with conn.cursor() as cur:
-                cur.execute(PG_SCHEMA)
-            conn.commit()
+        try:
+            with psycopg2.connect(db_url, connect_timeout=10) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(PG_SCHEMA)
+                conn.commit()
+        except Exception as e:
+            print(f"Warning: PostgreSQL schema initialization error: {e}")
     else:
-        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with connect() as conn:
-            conn.execute("PRAGMA journal_mode = WAL;")
-            conn.executescript(SQLITE_SCHEMA)
+        try:
+            DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with connect() as conn:
+                conn.execute("PRAGMA journal_mode = WAL;")
+                conn.executescript(SQLITE_SCHEMA)
+        except Exception as e:
+            print(f"Warning: SQLite schema initialization error: {e}")
