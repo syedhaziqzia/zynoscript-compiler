@@ -252,7 +252,7 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(r.headers.get("X-XSS-Protection"), "1; mode=block")
         self.assertEqual(r.headers.get("Referrer-Policy"), "strict-origin-when-cross-origin")
 
-    def test_first_user_admin_promotion_logic(self):
+    def test_public_registration_always_assigns_user_role(self):
         from contextlib import contextmanager
         import sqlite3
         from unittest.mock import patch
@@ -268,8 +268,8 @@ class ApiTests(unittest.TestCase):
             yield mem_conn
 
         with patch("app.routes.auth.connect", mem_connect), patch("app.routes.auth.logs.record"):
-            res1 = register(Credentials(username="founder_admin", password="password123"))
-            self.assertEqual(res1["user"]["role"], "admin")
+            res1 = register(Credentials(username="first_visitor", password="password123"))
+            self.assertEqual(res1["user"]["role"], "user")
             res2 = register(Credentials(username="second_dev", password="password123"))
             self.assertEqual(res2["user"]["role"], "user")
 

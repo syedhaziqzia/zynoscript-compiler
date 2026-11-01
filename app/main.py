@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from .config import CORS_ORIGINS, FRONTEND_DIR, ROOT
+from .config import CORS_ORIGINS, PUBLIC_DIR, ROOT
 from .db import init_db
 from .routes import admin, auth, compiler, grammar, logs
 
@@ -80,7 +80,6 @@ app.add_middleware(
 for module in (auth, grammar, compiler, logs, admin):
     app.include_router(module.router)
 
-STATIC_DIR = ROOT / "public" if (ROOT / "public").exists() else FRONTEND_DIR
-
+STATIC_DIR = PUBLIC_DIR
 if STATIC_DIR.exists():
-    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="frontend")
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

@@ -825,30 +825,32 @@ $("#pw-toggle").addEventListener("click", (e) => {
       }
     }
 
-    // 2. Inter-node soft collision resolution (gentle deflection so colliding elements smoothly part ways)
+    // 2. Inter-node soft collision resolution (elliptical capsule bounds tailored for text tokens)
     for (let i = 0; i < nodes.length; i++) {
       const n1 = nodes[i];
       for (let j = i + 1; j < nodes.length; j++) {
         const n2 = nodes[j];
         const dx = n2.x - n1.x;
         const dy = n2.y - n1.y;
-        const dist = Math.hypot(dx, dy);
-        const minDist = (n1.radius || 18) + (n2.radius || 18);
+        const rx = (n1.radius || 22) + (n2.radius || 22);
+        const ry = 22;
+        const normDist = Math.hypot(dx / rx, dy / ry);
 
-        if (dist > 0 && dist < minDist) {
-          const nx = dx / dist;
-          const ny = dy / dist;
-          const overlap = minDist - dist;
+        if (normDist > 0 && normDist < 1.0) {
+          const overlap = 1.0 - normDist;
+          const nx = (dx / rx) / normDist;
+          const ny = (dy / ry) / normDist;
 
           // Soft position nudge to gracefully avoid overlapping
-          const nudge = Math.min(overlap * 0.035, 0.45);
-          n1.x -= nx * nudge;
-          n1.y -= ny * nudge;
-          n2.x += nx * nudge;
-          n2.y += ny * nudge;
+          const nudgeX = nx * overlap * rx * 0.035;
+          const nudgeY = ny * overlap * ry * 0.035;
+          n1.x -= nudgeX;
+          n1.y -= nudgeY;
+          n2.x += nudgeX;
+          n2.y += nudgeY;
 
           // Very slight velocity deflection off each other's path
-          const impulse = 0.012 * (overlap / minDist);
+          const impulse = 0.010 * overlap;
           n1.vx -= nx * impulse;
           n1.vy -= ny * impulse;
           n2.vx += nx * impulse;

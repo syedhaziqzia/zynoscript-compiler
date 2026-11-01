@@ -1,150 +1,96 @@
 <p align="center">
-  <img src="frontend/assets/Zynoscript-Logo.jpg" alt="ZynoScript Logo" width="120" style="border-radius: 16px; margin-bottom: 8px;"/>
+  <img src="public/assets/Zynoscript-Logo.jpg" alt="ZynoScript Logo" width="120" style="border-radius: 16px; margin-bottom: 8px;"/>
 </p>
 
 <h1 align="center">ZynoScript Compiler Studio</h1>
 
 <p align="center">
-  <strong>A full-stack, web-based compiler construction workbench with real-time pipeline stages, dynamic grammar customization, and comprehensive telemetry.</strong>
+  <strong>A full-stack, web-based compiler construction workbench with real-time pipeline stages, dynamic grammar customization, and telemetry.</strong>
 </p>
 
 <p align="center">
-  <a href="#features"><img src="https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white" alt="Python Version"/></a>
-  <a href="#features"><img src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI"/></a>
-  <a href="#testing"><img src="https://img.shields.io/badge/Tests-40%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
-  <a href="#production-deployment"><img src="https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel&logoColor=white" alt="Vercel"/></a>
-  <a href="#production-deployment"><img src="https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=white" alt="Neon Postgres"/></a>
+  <a href="https://your-project.vercel.app"><img src="https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel&logoColor=white" alt="Live Demo"/></a>
+  <a href="#running-the-test-suite"><img src="https://img.shields.io/badge/Tests-40%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
+  <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI"/></a>
+  <a href="https://neon.tech"><img src="https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=white" alt="Neon Postgres"/></a>
+  <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white" alt="Python Version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT"/></a>
 </p>
 
 <p align="center">
-  <img src="frontend/assets/compiler-workbench.png" alt="ZynoScript Compiler Workbench" width="100%" style="border-radius: 12px; border: 1px solid #e1e4e8; box-shadow: 0 10px 30px rgba(0,0,0,0.08);"/>
+  <img src="public/assets/compiler-workbench.png" alt="ZynoScript Compiler Workbench" width="100%" style="border-radius: 12px; border: 1px solid #e1e4e8; box-shadow: 0 10px 30px rgba(0,0,0,0.08);"/>
 </p>
 
 ---
 
-## 💡 Overview
+## 👥 Authors & Credits
 
-**ZynoScript** is a custom programming language designed for Compiler Construction. The **ZynoScript Compiler Studio** provides an interactive web-based IDE where students and developers can:
+This project was developed for the **Compiler Construction Lab Project**:
 
-1. **Write and run ZynoScript code** with real-time feedback and diagnostic tracing.
-2. **Inspect five decoupled compiler stages** independently (Lexical Analysis, Syntax Parsing, Semantic Validation, Intermediate Code Generation, and Virtual Machine / Output Interpretation).
-3. **Reconfigure grammar rules dynamically** on a per-user basis without modifying a single line of backend compiler code.
-4. **Monitor developer activity** via an audit logging subsystem with program hashing and telemetry.
-5. **Manage users and permissions** using built-in administrative tools.
+* **Backend Lead & Core Compiler Architecture:**  
+  *Co-developed the foundational compiler engine, grammar specifications, and core backend stages.*  
+  👉 **[Friend's GitHub Profile](https://github.com/FRIEND_GITHUB_USERNAME)** *(Replace `FRIEND_GITHUB_USERNAME` with their GitHub handle)*
+
+* **Full-Stack Engineering, UX & Cloud Infrastructure:**  
+  *Designed the studio workbench interface, dynamic grammar engine, session security, test suite, and Vercel/Neon deployment.*  
+  👉 **[Syed Haziq Zia](https://github.com/syedhaziqzia)**
+
+---
+
+## 🎯 Problem Statement
+
+Traditional compiler toolchains (such as Lex, Yacc, and Flex/Bison) operate as black boxes, providing terminal output only after compilation completes or fails. For students and engineers learning compiler construction, inspecting the internal state of each phase—Token streams, Abstract Syntax Trees (AST), Symbol Tables, Type Verification, Intermediate Three-Address Code (TAC), and Virtual Machine memory—is notoriously difficult.
+
+**ZynoScript Compiler Studio** solves this by delivering an interactive laboratory IDE where:
+1. Every compilation phase operates as an isolated, inspectable pure function.
+2. Grammar rules (keywords, operator symbols) can be rebound dynamically in real-time.
+3. Errors pinpoint the exact blocking stage with actionable diagnostic feedback.
+4. Telemetry logs and compiler performance metrics are tracked across sessions.
 
 ---
 
 ## 📸 Interface Showcase
 
 ### 1. Welcome & Authentication Gateway
-The user entry portal featuring secure registration and login, session persistence controls, sample program previews, and dynamic AST/TAC ambient background visuals:
+Features secure registration and login, session persistence controls, and interactive floating compiler tokens:
 
 <p align="center">
-  <img src="frontend/assets/welcome-auth.png" alt="ZynoScript Welcome & Sign In" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
+  <img src="public/assets/welcome-auth.png" alt="ZynoScript Welcome & Sign In" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
 </p>
 
 ### 2. Interactive Compiler Workbench
-The central IDE environment featuring a dedicated source editor with line numbering, example presets, real-time stage tabs (Lexical, Syntax, Semantic, ICG, Output), an execution console, and runtime variable inspection:
+Central laboratory IDE with line-numbered code editing, stage tabs (Lexical, Syntax, Semantic, ICG, Output), console terminal, and runtime variable inspector:
 
 <p align="center">
-  <img src="frontend/assets/compiler-workbench.png" alt="ZynoScript Compiler Workbench" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
+  <img src="public/assets/compiler-workbench.png" alt="ZynoScript Compiler Workbench" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
 </p>
 
-### 3. Language Reference & Specification Guide
-An integrated, in-app specification sheet outlining all active keyword mappings, operator overrides, data type equivalents, and formal grammar rules:
+### 3. Language Reference & Specification
+In-app specification sheet listing active keywords, custom operator overrides, data types, and formal grammar BNF rules:
 
 <p align="center">
-  <img src="frontend/assets/language-reference.png" alt="ZynoScript Language Reference" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
+  <img src="public/assets/language-reference.png" alt="ZynoScript Language Reference" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
 </p>
 
 ---
 
-## 🏗 System Architecture
+## 🔄 The 5 Compiler Stages
 
-The application is built on a clean, decoupled architecture. The frontend communicates with a high-performance **FastAPI** backend, and every compiler stage operates as a pure function with strict input/output contracts.
+Every stage lives in [`app/engines/`](app/engines/) as an independent pure engine:
 
-```mermaid
-flowchart TD
-    subgraph Client["Frontend Client (Vanilla Web Stack)"]
-        UI["Code Editor & Studio Workbench"]
-        GrammarUI["Grammar Editor (Keywords / Ops)"]
-        AdminUI["Admin & Activity Log Panel"]
-    end
-
-    subgraph API["FastAPI HTTP Layer"]
-        AuthRoute["/api/auth (PBKDF2 Sessions)"]
-        CompileRoute["/api/compile/{stage}"]
-        GrammarRoute["/api/grammar"]
-        LogRoute["/api/logs & /api/admin"]
-    end
-
-    subgraph Pipeline["Pipeline Orchestrator (pipeline.py)"]
-        direction TB
-        E1["1. Lexical Analysis (Tokens & Identifiers)"]
-        E2["2. Syntax Analysis (AST & Parse Tree)"]
-        E3["3. Semantic Analysis (Symbol Table & Scope Rules)"]
-        E4["4. Intermediate Code Generation (TAC & Quadruples)"]
-        E5["5. Output Engine (Virtual Machine Runtime)"]
-
-        E1 --> E2
-        E2 --> E3
-        E3 --> E4
-        E2 --> E5
-    end
-
-    subgraph Storage["Persistent Layer (SQLite WAL Mode)"]
-        DB[(data/zynoscript.db)]
-        Users["Users & Sessions"]
-        Logs["Activity Logs & Telemetry"]
-    end
-
-    UI --> CompileRoute
-    GrammarUI --> GrammarRoute
-    AdminUI --> LogRoute
-    UI --> AuthRoute
-
-    CompileRoute --> Pipeline
-    Pipeline --> Storage
-    AuthRoute --> Storage
-    LogRoute --> Storage
-```
+| Stage | Module | Input | Output / Inspection Data |
+|---|---|---|---|
+| **01. Lexical** | `lexical.py` | Source Code | Token stream, identifiers, symbol categories, lexical errors |
+| **02. Syntax** | `syntax.py` | Token Stream | Abstract Syntax Tree (JSON & ASCII tree), parsing errors |
+| **03. Semantic** | `semantic.py` | AST | Symbol Table, scope hierarchy, type verification (Rules 1–7) |
+| **04. ICG** | `icg.py` | AST | Three-Address Code (TAC), Quadruple table `(op, arg1, arg2, res)` |
+| **05. VM Runtime** | `output.py` | AST | Virtual machine execution, terminal output, final variable states |
 
 ---
 
-## ✨ Key Features
+## 💻 ZynoScript Syntax Cheat Sheet
 
-| Component | Capabilities |
-|---|---|
-| **🎨 Modern Web UI** | Clean, responsive workbench with custom controls, syntax line highlighting, example programs, and zero build tool overhead. |
-| **🔍 5 Independent Engines** | Run any compiler stage individually or execute the complete pipeline with stage-blocking error visualization. |
-| **⚙️ Dynamic Grammar Mapping** | Rename language keywords (e.g., change `beam` to `print`) and operators per user; all compiler stages instantly adapt. |
-| **🛡️ Robust Security** | Constant-time password verification (`secrets.compare_digest`), anti-enumeration protections, parameterized SQL queries, and CORS configuration. |
-| **⚡ Concurrency Ready** | SQLite Write-Ahead Logging (WAL mode) with busy timeouts for seamless multi-user access without table lockups. |
-| **📊 Activity Telemetry** | Full audit trail tracking compilation runs, line counts, SHA-1 program hashes, and administrative events. |
-| **👑 Role-Based Access** | Automatic first-account administrator provisioning, user management, and password reset facilities. |
-
----
-
-## 💻 The ZynoScript Language
-
-ZynoScript is a statically-typed, imperative programming language. Every valid program must terminate with `halt;`.
-
-### Language Cheat Sheet
-
-| Category | ZynoScript Syntax | Description / Equivalent |
-|---|---|---|
-| **Variable Declaration** | `let <type> <id> := <val>;` | Variable declaration (`let whole x := 10;`) |
-| **Types** | `whole`, `part`, `phrase`, `flag`, `mark` | `int`, `float`, `string`, `bool`, `char` |
-| **Output** | `beam <expr>;` | Prints expression to console |
-| **Conditional** | `whenTrue (cond) { ... } elseWay { ... }` | `if (cond) { ... } else { ... }` |
-| **Loops** | `spin (cond) { ... }` | `while (cond) { ... }` |
-| **Arithmetic** | `+~`, `-~`, `*~`, `/~` | Standard `+`, `-`, `*`, `/` |
-| **Comparison** | `=>>` (gt), `<<=` (lt), `~=` (eq), `~!` (neq) | `>`, `<`, `==`, `!=` |
-| **Boolean Logic** | `&&~`, `\|\|~`, `!~` | `&&`, `\|\|`, `!` |
-| **Termination** | `halt;` | Required terminal statement |
-
-### Sample Code
+Every valid ZynoScript program must end with `halt;`:
 
 ```zynoscript
 let whole counter := 1;
@@ -163,34 +109,79 @@ beam "Execution complete.";
 halt;
 ```
 
+* **Types:** `whole` (int), `part` (float), `phrase` (str), `flag` (bool), `mark` (char)
+* **Control Flow:** `whenTrue (cond) { ... } elseWay { ... }`, `spin (cond) { ... }`
+* **Operators:** `+~`, `-~`, `*~`, `/~` (Arithmetic) | `=>>`, `<<=`, `~=`, `~!` (Comparison)
+* **Output & Terminate:** `beam <expr>;` | `halt;`
+
 ---
 
-## 🔄 Compiler Engine Contracts
+## 🚀 Quick Start (Localhost vs. Production)
 
-Every engine lives in [app/engines/](file:///d:/zynoscript-compiler/app/engines) as an independent pure module that imports no other engine:
+### Running Locally (Localhost)
+Running locally uses a zero-configuration SQLite database (`data/zynoscript.db`) and runs on your computer:
 
-| Engine | File | Input | Output |
-|---|---|---|---|
-| **Lexical** | `lexical.py` | `source: str, grammar: dict` | `tokens[]`, `identifiers[]`, `categories[]`, `errors[]` |
-| **Syntax** | `syntax.py` | `tokens: list, grammar: dict` | `ast` (JSON), `tree` (Formatted text), `errors[]` |
-| **Semantic** | `semantic.py` | `ast: list, grammar: dict` | `symbols[]` (Symbol Table), `errors[]` (Rules 1–7) |
-| **ICG** | `icg.py` | `ast: list, grammar: dict` | `tac[]` (Three-Address Code), `quads[]` (Quadruples) |
-| **Output** | `output.py` | `ast: list, grammar: dict` | `output[]` (Console lines), `variables[]`, `steps`, `errors[]` |
+```bash
+# 1. Clone repository
+git clone https://github.com/<your-username>/zynoscript-compiler.git
+cd zynoscript-compiler
+
+# 2. Create virtual environment
+python -m venv .venv
+# On Windows PowerShell:
+.venv\Scripts\Activate.ps1
+# On macOS/Linux:
+# source .venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Start local development server
+uvicorn app.main:app --reload
+```
+* Studio UI: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+* API Swagger Documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 > [!NOTE]
-> Engines are chained by [app/pipeline.py](file:///d:/zynoscript-compiler/app/pipeline.py). If an early stage fails (e.g. Syntax error), subsequent stages are cleanly blocked and the UI highlights the exact blocking cause.
+> **Do Localhost and Vercel clash?**  
+> **No.** Localhost runs only on your computer (`127.0.0.1:8000`) using local SQLite. Vercel runs in the cloud using Neon PostgreSQL. They are completely separate environments and never interfere with each other.
 
 ---
 
-## 🔒 Security & Concurrency
+### Deploying to Vercel (100% Free Cloud Hosting)
 
-The project includes built-in safeguards for production and lab environments:
+1. Create a free PostgreSQL database at [Neon.tech](https://neon.tech) and copy your connection string (`postgresql://...`).
+2. Push this repository to your GitHub account.
+3. Import the repository in [Vercel](https://vercel.com).
+4. In Vercel's **Settings → Environment Variables**, add:
+   * `DATABASE_URL`: *(Your Neon PostgreSQL connection string)*
+   * `ADMIN_USERNAME`: *(Optional: your desired administrator username)*
+   * `ADMIN_PASSWORD`: *(Optional: your desired administrator password)*
+5. Click **Deploy**. Vercel will host the studio on its global CDN and execute API requests serverless 24/7.
 
-* **SQL Injection Prevention:** 100% of database queries use parameterized SQL (`?` placeholders).
-* **Timing-Safe Auth:** Password verification utilizes `secrets.compare_digest` with dummy hash executions on unknown usernames to prevent timing-based user enumeration.
-* **Brute-Force & Session Protection:** Cryptographically secure 256-bit session tokens (`secrets.token_urlsafe(32)`) with automatic session pruning.
-* **High-Concurrency SQLite:** Write-Ahead Logging (`PRAGMA journal_mode = WAL;`) and busy wait timeouts prevent `database is locked` errors during simultaneous code runs.
-* **Input Bounds:** Source code length is capped via `MAX_SOURCE_CHARS` (20,000 characters by default) to protect against resource exhaustion.
+> [!TIP]
+> **Do you need to keep your PC on or maintain Vercel?**  
+> **No.** Vercel runs automatically in the cloud. You do not need to keep anything running locally.
+
+---
+
+## 🛡️ Security & Administrator Access
+
+* **Abuse-Proof Public Access:** Public web registrations are strictly granted standard `user` accounts. No visitor can elevate themselves to administrator through the web interface.
+* **Administrator Provisioning:** Administrator accounts can only be provisioned by setting `ADMIN_USERNAME` and `ADMIN_PASSWORD` in server environment variables (in `.env` or Vercel dashboard).
+* **Timing-Safe Auth:** Passwords use salted PBKDF2-HMAC-SHA256 (120,000 iterations) with `secrets.compare_digest` and constant-time dummy verification.
+* **SQL Injection Immunity:** 100% of database queries use parameterized placeholders (`?` / `%s`).
+* **HTTP Security Headers:** Includes `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, and `Referrer-Policy: strict-origin-when-cross-origin`.
+
+---
+
+## 🧪 Running the Test Suite
+
+Execute the 40 automated integration and unit tests:
+
+```bash
+python -m unittest discover tests
+```
 
 ---
 
@@ -199,133 +190,30 @@ The project includes built-in safeguards for production and lab environments:
 ```text
 zynoscript-compiler/
 ├── app/
-│   ├── main.py                  # Application entry point, CORS, routes & static mount
-│   ├── config.py                # Environment-driven configuration & constants
-│   ├── db.py                    # SQLite schema, WAL mode & connection manager
-│   ├── auth.py                  # Cryptographic auth, PBKDF2 hashing & session guard
-│   ├── logs.py                  # Telemetry recording and querying
-│   ├── pipeline.py              # Pipeline chaining orchestrator
-│   ├── engines/                 # Pure compiler stages (zero web dependencies)
-│   │   ├── grammar.py           # Grammar rules, validation & BNF generator
-│   │   ├── lexical.py           # Tokenizer & symbol scanner
+│   ├── main.py                  # FastAPI application, CORS, cyber security headers & static mount
+│   ├── config.py                # Environment-driven settings & security bounds
+│   ├── db.py                    # Dual SQLite/PostgreSQL connection & schema manager
+│   ├── auth.py                  # Cryptographic PBKDF2 hashing & session management
+│   ├── logs.py                  # Telemetry recording and audit logging
+│   ├── pipeline.py              # 5-stage compiler pipeline orchestrator
+│   ├── engines/                 # Pure compiler modules (zero web dependencies)
+│   │   ├── grammar.py           # Dynamic grammar specifications & BNF generator
+│   │   ├── lexical.py           # Tokenizer & symbol table scanner
 │   │   ├── syntax.py            # Recursive-descent AST parser
-│   │   ├── semantic.py          # Type checking, scope validation & semantic rules
-│   │   ├── icg.py               # TAC and quadruples generator
-│   │   └── output.py            # Abstract syntax tree interpreter / VM runtime
-│   └── routes/                  # FastAPI REST endpoints
-│       ├── auth.py              # User registration, login, session token validation
-│       ├── compiler.py          # POST /api/compile/{stage}
-│       ├── grammar.py           # Grammar read/update/reset endpoints
-│       ├── logs.py              # Activity audit query endpoint
-│       └── admin.py             # Administrative controls & user management
-├── api/                         # Vercel serverless function entry point
-│   └── index.py
-├── frontend/                    # Browser-based workbench (no build step needed)
-│   ├── index.html               # Single-page studio interface
-│   ├── css/style.css            # Custom CSS design system
-│   ├── assets/                  # Logos and application screenshots
-│   │   ├── compiler-workbench.png
-│   │   ├── language-reference.png
-│   │   ├── welcome-auth.png
-│   │   ├── wordmark.png
-│   │   └── Zynoscript-Logo.jpg
-│   └── js/                      # Modular client logic (api.js, app.js, samples.js)
-├── tests/                       # Automated test suite
-│   ├── test_api.py              # REST API & authentication integration tests
-│   └── test_engines.py          # Isolated compiler engine unit tests
-├── data/                        # SQLite storage directory (.gitkeep tracked)
-├── .env.example                 # Environment configuration template
-├── vercel.json                  # Vercel routing configuration
+│   │   ├── semantic.py          # Type verification & scope hierarchy rules
+│   │   ├── icg.py               # TAC (Three-Address Code) & quadruples generator
+│   │   └── output.py            # AST interpreter & virtual machine runtime
+│   └── routes/                  # REST API routes (auth, compiler, grammar, logs, admin)
+├── api/
+│   └── index.py                 # Vercel serverless function entrypoint
+├── public/                      # Static studio frontend (HTML, CSS, JS, Assets)
+├── tests/                       # 40 automated tests (APIs, engines, permissions, security)
+├── data/                        # Local SQLite database directory
+├── .env.example                 # Configuration template
+├── vercel.json                  # Vercel serverless rewrite rules
 ├── requirements.txt             # Minimal Python dependencies
 └── README.md                    # Project documentation
 ```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-* **Python 3.12+**
-* `pip` and `venv`
-
-### Local Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/<your-username>/zynoscript-compiler.git
-   cd zynoscript-compiler
-   ```
-
-2. **Set up a virtual environment:**
-   ```bash
-   # Windows (PowerShell)
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
-
-   # macOS / Linux
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Launch the development server:**
-   ```bash
-   uvicorn app.main:app --reload
-   ```
-
-5. **Open the studio:**
-   * Studio UI: [http://127.0.0.1:8000](http://127.0.0.1:8000)
-   * Interactive Swagger Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
-> [!TIP]
-> **Administrator Setup & Forking Guide:**
-> * **Environment Seeding (Recommended):** To provision an initial admin account on your deployment (e.g., Vercel or local `.env`), define `ADMIN_USERNAME` and `ADMIN_PASSWORD` in your environment variables. The server will seed this account on startup with salted PBKDF2 password hashing.
-> * **Zero-Config First-User Fallback:** If you do not configure `ADMIN_USERNAME` in your environment, the very first account registered through the web UI is automatically promoted to the **Admin** role.
-> * **UI Management & Security:** Once logged in, admins can open the **Admin Panel** to inspect real-time compiler telemetry, view cross-user audit logs, reset user passwords, or update their own password. No default credentials exist in the source code, ensuring public forks remain completely secure.
-
----
-
-### Running the Test Suite
-
-Execute the comprehensive test suite (40 automated tests covering engines, APIs, auth, security headers, and permission boundaries):
-
-```bash
-python -m unittest discover tests
-```
-
----
-
-## 🌐 Production Deployment
-
-### Deploying to Vercel (Recommended - 100% Free with Neon PostgreSQL)
-
-This repository includes [`vercel.json`](vercel.json) and a hybrid database manager ready for serverless execution:
-
-1. Create a free project at [Neon.tech](https://neon.tech) and copy your `DATABASE_URL`.
-2. Push this repository to your GitHub account.
-3. Import the repository in [Vercel](https://vercel.com) (Hobby plan).
-4. In Vercel's **Environment Variables** section, add:
-   * **Key:** `DATABASE_URL`
-   * **Value:** *(your Neon connection string `postgresql://...`)*
-   * *(Optional)* **Key:** `ADMIN_USERNAME` and `ADMIN_PASSWORD` *(to seed your custom administrative account)*
-5. Click **Deploy**. Vercel will host the frontend on edge CDN and execute compiler API endpoints as serverless functions with permanent cloud database storage.
-
-### Environment Variables
-
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | *(none - falls back to SQLite)* | PostgreSQL connection URL (e.g. Neon or Supabase) |
-| `ADMIN_USERNAME` | *(empty)* | Optional username to automatically seed as Administrator |
-| `ADMIN_PASSWORD` | *(empty)* | Optional password for the initial seed Administrator account |
-| `DB_PATH` | `data/zynoscript.db` | Filesystem path for the SQLite database (when `DATABASE_URL` is omitted) |
-| `CORS_ORIGINS` | `*` | Comma-separated list of allowed CORS origins |
-| `SESSION_HOURS` | `12` | Session lifetime for standard logins |
-| `REMEMBER_DAYS` | `30` | Session lifetime when "Remember me" is checked |
-| `MAX_SOURCE_CHARS` | `20000` | Maximum program character length accepted by the compiler |
 
 ---
 

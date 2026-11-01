@@ -8,7 +8,7 @@ if os.getenv("VERCEL") and not os.getenv("DB_PATH"):
     DB_PATH = Path("/tmp/zynoscript.db")
 else:
     DB_PATH = Path(os.getenv("DB_PATH", str(ROOT / "data" / "zynoscript.db")))
-FRONTEND_DIR = ROOT / "frontend"
+PUBLIC_DIR = ROOT / "public"
 
 SESSION_HOURS = int(os.getenv("SESSION_HOURS", "12"))            # how long a login token stays valid
 REMEMBER_DAYS = int(os.getenv("REMEMBER_DAYS", "30"))            # lifetime when "Remember me" is ticked
