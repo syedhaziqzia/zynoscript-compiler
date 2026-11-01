@@ -39,6 +39,10 @@ This project was developed for our **Compiler Construction Lab Project**:
   👉 **[Syed Haziq Zia](https://github.com/syedhaziqzia)**  
   Engineered the modern laboratory IDE interface, visual compiler canvas animations, database architecture (dual SQLite / Neon PostgreSQL), timing-safe cryptographic security, exploit hardening, automated test suite, and Vercel cloud deployment.
 
+* **Quality Assurance, Research & Compiler Verification:**  
+  👉 **[Muhammad Noman](https://github.com/Noman-exe)**  
+  Conducted compiler pipeline testing, grammar validation research, test case verification, and quality assurance across execution stages.
+
 ---
 
 ## 🎯 What is ZynoScript?
@@ -243,11 +247,11 @@ zynoscript-compiler/
 
 ## 🎓 Group Members
 
-| # | Member Name | Role / Area of Contribution |
-|---|---|---|
-| 1 | **Syed Haziq Zia** | Full-Stack Engineering, Studio UI/UX, Security Architecture & Deployment |
-| 2 | **Syed Abdul Ali Naqvi** | Backend Lead, Core Compiler Engines & Grammar Architecture |
-| 3 | **Muhammad Noman** | Research, Quality Assurance & Compiler Verification |
+| # | Member Name | Role / Area of Contribution | GitHub Profile |
+|---|---|---|---|
+| 1 | **Syed Haziq Zia** | Full-Stack Engineering, Studio UI/UX, Security Architecture & Deployment | [@syedhaziqzia](https://github.com/syedhaziqzia) |
+| 2 | **Syed Abdul Ali Naqvi** | Backend Lead, Core Compiler Engines & Grammar Architecture | [@SyedAbdulAliNaqvi](https://github.com/SyedAbdulAliNaqvi) |
+| 3 | **Muhammad Noman** | Quality Assurance, Research & Compiler Verification | [@Noman-exe](https://github.com/Noman-exe) |
 
 ---
 
