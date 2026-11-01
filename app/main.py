@@ -3,9 +3,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
-from .config import CORS_ORIGINS, FRONTEND_DIR
+from .config import CORS_ORIGINS, FRONTEND_DIR, ROOT
 from .db import init_db
 from .routes import admin, auth, compiler, grammar, logs
 
@@ -29,5 +30,16 @@ app.add_middleware(
 for module in (auth, grammar, compiler, logs, admin):
     app.include_router(module.router)
 
-if FRONTEND_DIR.exists():
-    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+STATIC_DIR = ROOT / "public" if (ROOT / "public").exists() else FRONTEND_DIR
+
+
+@app.get("/", response_class=HTMLResponse)
+def serve_index():
+    for candidate in (STATIC_DIR / "index.html", FRONTEND_DIR / "index.html"):
+        if candidate.exists():
+            return HTMLResponse(content=candidate.read_text(encoding="utf-8"))
+    return HTMLResponse("<h1>ZynoScript Studio</h1>")
+
+
+if STATIC_DIR.exists():
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="frontend")
