@@ -29,7 +29,7 @@ This project was developed for the **Compiler Construction Lab Project**:
 
 * **Backend Lead & Core Compiler Architecture:**  
   *Co-developed the foundational compiler engine, grammar specifications, and core backend stages.*  
-  👉 **[Friend's GitHub Profile](https://github.com/FRIEND_GITHUB_USERNAME)** *(Replace `FRIEND_GITHUB_USERNAME` with their GitHub handle)*
+  👉 **[Syed Abdul Ali Naqvi](https://github.com/SyedAbdulAliNaqvi)**
 
 * **Full-Stack Engineering, UX & Cloud Infrastructure:**  
   *Designed the studio workbench interface, dynamic grammar engine, session security, test suite, and Vercel/Neon deployment.*  
