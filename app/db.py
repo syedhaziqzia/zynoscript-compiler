@@ -100,8 +100,12 @@ class PgCursorWrapper:
     def execute(self, sql, args=None):
         pg_sql = sql.replace("?", "%s")
         is_insert = pg_sql.strip().upper().startswith("INSERT")
-        if is_insert and "RETURNING" not in pg_sql.upper():
-            pg_sql += " RETURNING id"
+        upper = pg_sql.upper()
+        # Only append RETURNING id for tables that have an id primary key (e.g. users, activity_log)
+        # Avoid appending to tables like 'sessions' which use 'token' as primary key.
+        if is_insert and "RETURNING" not in upper:
+            if "USERS" in upper or "ACTIVITY_LOG" in upper:
+                pg_sql += " RETURNING id"
 
         self._cur.execute(pg_sql, args or ())
         if is_insert and self._cur.description:
@@ -145,6 +149,8 @@ class PgConnectionWrapper:
 
 def get_database_url() -> str:
     url = os.getenv("DATABASE_URL", "").strip()
+    if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
+        url = url[1:-1].strip()
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
     if url and "sslmode" not in url and ("neon.tech" in url or "supabase" in url):
@@ -153,8 +159,19 @@ def get_database_url() -> str:
     return url
 
 
+_db_initialized = False
+
+
+def ensure_db():
+    global _db_initialized
+    if not _db_initialized:
+        init_db()
+        _db_initialized = True
+
+
 @contextmanager
 def connect():
+    ensure_db()
     db_url = get_database_url()
     if db_url and psycopg2 is not None:
         raw_conn = psycopg2.connect(db_url, connect_timeout=10)
@@ -189,8 +206,10 @@ def init_db():
     else:
         try:
             DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-            with connect() as conn:
-                conn.execute("PRAGMA journal_mode = WAL;")
-                conn.executescript(SQLITE_SCHEMA)
+            conn = sqlite3.connect(DB_PATH, timeout=10.0)
+            conn.execute("PRAGMA journal_mode = WAL;")
+            conn.executescript(SQLITE_SCHEMA)
+            conn.commit()
+            conn.close()
         except Exception as e:
             print(f"Warning: SQLite schema initialization error: {e}")

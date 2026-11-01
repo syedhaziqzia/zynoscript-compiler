@@ -48,7 +48,15 @@ async def restore_vercel_path(request: Request, call_next):
     if request.scope["path"].startswith("/api") and len(request.scope["path"]) > 4 and request.scope["path"].endswith("/"):
         request.scope["path"] = request.scope["path"].rstrip("/")
 
-    resp = await call_next(request)
+    try:
+        resp = await call_next(request)
+    except Exception as exc:
+        import traceback
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"{type(exc).__name__}: {str(exc)}"},
+        )
     if resp.status_code == 405 and request.scope["path"].startswith("/api"):
         return JSONResponse({"detail": "Not Found"}, status_code=404)
     return resp
