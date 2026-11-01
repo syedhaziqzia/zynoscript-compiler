@@ -241,6 +241,17 @@ zynoscript-compiler/
 
 ---
 
+## 🎓 Group Members
+
+| # | Member Name | Role / Area of Contribution |
+|---|---|---|
+| 1 | **Syed Haziq Zia** | Full-Stack Engineering, Studio UI/UX, Security Architecture & Deployment |
+| 2 | **Syed Abdul Ali Naqvi** | Backend Lead, Core Compiler Engines & Grammar Architecture |
+| 3 | **Muhammad Noman** | Research, Quality Assurance & Compiler Verification |
+
+---
+
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
+
