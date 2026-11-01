@@ -210,22 +210,33 @@ def ensure_db():
         _db_initialized = True
 
 
+def get_active_db_type() -> str:
+    db_url = get_database_url()
+    if db_url and psycopg2 is not None:
+        return "PostgreSQL (Cloud)"
+    return "SQLite (Local)"
+
+
 @contextmanager
 def connect():
     ensure_db()
     db_url = get_database_url()
+    raw_conn = None
     if db_url and psycopg2 is not None:
         try:
             raw_conn = psycopg2.connect(db_url, connect_timeout=10)
-            wrapped = PgConnectionWrapper(raw_conn)
-            try:
-                yield wrapped
-                wrapped.commit()
-            finally:
-                wrapped.close()
-            return
         except Exception as pg_err:
             print(f"Warning: PostgreSQL connection failed ({pg_err}), falling back to SQLite: {DB_PATH}")
+            raw_conn = None
+
+    if raw_conn is not None:
+        wrapped = PgConnectionWrapper(raw_conn)
+        try:
+            yield wrapped
+            wrapped.commit()
+        finally:
+            wrapped.close()
+        return
 
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
     conn.row_factory = sqlite3.Row
@@ -236,6 +247,7 @@ def connect():
         conn.commit()
     finally:
         conn.close()
+
 
 
 def seed_admin_user(conn_or_cur, is_pg: bool = False):

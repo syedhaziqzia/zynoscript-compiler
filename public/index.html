@@ -301,7 +301,7 @@
     </div>
   </main>
 
-  <!-- View 4: Activity Log (Concept 6: Feed-Style Stream) -->
+  <!-- View 4: Activity Log (Feed-Style Stream) -->
   <main id="activity-view" class="page-view" hidden>
     <div class="page-container">
       <section class="card-panel">
@@ -310,10 +310,16 @@
             <h1 class="page-title">Activity Stream</h1>
             <p id="log-scope" class="muted text-small"></p>
           </div>
-          <div class="row">
+          <div class="row header-controls">
             <select id="log-user" aria-label="Filter by user" hidden><option value="">All users</option></select>
             <select id="log-filter" aria-label="Filter by action"><option value="">All actions</option></select>
-            <button id="log-refresh" class="btn ghost small">Refresh</button>
+            <select id="log-status" aria-label="Filter by status">
+              <option value="">All outcomes</option>
+              <option value="ok">Success only</option>
+              <option value="error">Errors only</option>
+            </select>
+            <button id="log-refresh" class="btn ghost small" title="Refresh logs"><span data-icon="refresh"></span> Refresh</button>
+            <button id="log-export-btn" class="btn ghost small" title="Export logs as JSON"><span data-icon="download"></span> Export</button>
           </div>
         </header>
         <div id="log-body" class="card-body flush"></div>
@@ -321,18 +327,101 @@
     </div>
   </main>
 
-  <!-- View 5: Admin Panel -->
+  <!-- View 5: Admin Panel & System Telemetry -->
   <main id="admin-view" class="page-view" hidden>
-    <div class="page-container">
+    <div class="page-container admin-container">
+      <!-- Admin Telemetry Metric Cards -->
+      <section class="telemetry-grid" id="admin-telemetry-grid">
+        <div class="stat-card">
+          <div class="stat-icon" data-icon="users"></div>
+          <div class="stat-content">
+            <span class="stat-label">Total Users</span>
+            <span class="stat-val" id="stat-total-users">-</span>
+            <span class="stat-meta" id="stat-users-meta">Loading users...</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" data-icon="play"></div>
+          <div class="stat-content">
+            <span class="stat-label">Pipeline Runs</span>
+            <span class="stat-val" id="stat-total-runs">-</span>
+            <span class="stat-meta" id="stat-runs-meta">0% pass rate</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" data-icon="activity"></div>
+          <div class="stat-content">
+            <span class="stat-label">Active Sessions</span>
+            <span class="stat-val" id="stat-active-sessions">-</span>
+            <span class="stat-meta" id="stat-sessions-meta">Active tokens</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" data-icon="database"></div>
+          <div class="stat-content">
+            <span class="stat-label">Database Backend</span>
+            <span class="stat-val" id="stat-db-type">-</span>
+            <span class="stat-meta" id="stat-db-meta"><span class="live-dot ok"></span> Connected</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Stage Execution Breakdown -->
+      <section class="card-panel admin-stage-panel">
+        <header class="card-header flex-header">
+          <div>
+            <h3>Compiler Pipeline Stage Telemetry</h3>
+            <p class="muted text-small">Execution volume across compiler pipeline phases.</p>
+          </div>
+        </header>
+        <div class="card-body">
+          <div class="stage-stats-bar" id="admin-stage-stats">
+            <!-- Stage stats loaded dynamically -->
+          </div>
+        </div>
+      </section>
+
+      <!-- User Management Panel -->
       <section class="card-panel">
         <header class="card-header flex-header">
           <div>
-            <h1 class="page-title">User Management</h1>
-            <p class="muted text-small">Admin privileges and telemetry.</p>
+            <h2 class="page-title">User Accounts & Privileges</h2>
+            <p class="muted text-small">Inspect registered users, activity, grammar configurations, and access rights.</p>
           </div>
-          <button id="users-refresh" class="btn ghost small">Refresh</button>
+          <div class="row header-controls">
+            <input type="search" id="admin-user-search" class="admin-search-input" placeholder="Filter user by name..." aria-label="Search users">
+            <select id="admin-role-filter" aria-label="Filter by role">
+              <option value="">All roles</option>
+              <option value="admin">Admins only</option>
+              <option value="user">Standard users</option>
+            </select>
+            <button id="users-refresh" class="btn ghost small"><span data-icon="refresh"></span> Refresh</button>
+          </div>
         </header>
         <div id="users-body" class="card-body flush"></div>
+      </section>
+
+      <!-- Maintenance Panel -->
+      <section class="card-panel maintenance-panel">
+        <header class="card-header flex-header">
+          <div>
+            <h3>System Operations & Telemetry Management</h3>
+            <p class="muted text-small">Audit logs maintenance and data export utilities.</p>
+          </div>
+        </header>
+        <div class="card-body maintenance-actions">
+          <div class="maintenance-item">
+            <div>
+              <strong>Prune Activity Audit Logs</strong>
+              <p class="muted text-small">Clear old compiler telemetry logs while retaining registered user accounts.</p>
+            </div>
+            <div class="row">
+              <button class="btn small ghost" id="btn-prune-7d">Prune &gt; 7 Days</button>
+              <button class="btn small ghost" id="btn-prune-30d">Prune &gt; 30 Days</button>
+              <button class="btn small danger" id="btn-prune-all">Clear All Logs</button>
+            </div>
+          </div>
+        </div>
       </section>
     </div>
   </main>
@@ -351,6 +440,24 @@
       </div>
     </form>
   </dialog>
+
+  <!-- Admin Grammar Inspector Modal Dialog -->
+  <dialog id="dlg-grammar" class="dlg-grammar">
+    <form method="dialog">
+      <div class="dlg-grammar-header">
+        <div>
+          <h2 id="dlg-grammar-title">User Language Grammar</h2>
+          <p id="dlg-grammar-sub" class="muted text-small"></p>
+        </div>
+        <button value="cancel" class="drawer-close-btn" formnovalidate aria-label="Close"><span data-icon="close"></span></button>
+      </div>
+      <div id="dlg-grammar-content" class="dlg-grammar-body"></div>
+      <div class="dlg-actions">
+        <button value="cancel" class="btn primary" formnovalidate>Close</button>
+      </div>
+    </form>
+  </dialog>
+
 
   <!-- Command Palette Modal (Ctrl + K) -->
   <dialog id="cmd-palette" class="cmd-palette">

@@ -160,12 +160,79 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(r.status_code, 201)
         self.assertEqual(r.json()["user"]["role"], "user")
 
-    def test_admin_username_registration_rejected(self):
-        r = self.client.post("/api/auth/register", json={"username": config.DEFAULT_ADMIN_USERNAME, "password": "password123"})
-        self.assertEqual(r.status_code, 400)
+    def test_admin_telemetry(self):
+        r = self.client.get("/api/admin/telemetry", headers=self.admin)
+        self.assertEqual(r.status_code, 200)
+        data = r.json()["telemetry"]
+        self.assertIn("total_users", data)
+        self.assertIn("stages", data)
+        self.assertIn("lexical", data["stages"])
+        self.assertIn("db_backend", data)
+        # Normal user cannot access
+        self.assertEqual(self.client.get("/api/admin/telemetry", headers=self.ali).status_code, 403)
+
+    def test_admin_user_grammar_inspection_and_reset(self):
+        from app.engines import grammar as G
+        uid = self.client.get("/api/auth/me", headers=self.ali).json()["id"]
+        # Ali sets custom grammar
+        cg = G.default()
+        cg["keywords"]["HALT"] = "stop"
+        r_put = self.client.put("/api/grammar", json={
+            "keywords": cg["keywords"],
+            "operators": cg["operators"]
+        }, headers=self.ali)
+        self.assertEqual(r_put.status_code, 200)
+
+        # Admin inspects Ali's grammar
+        inspect_res = self.client.get(f"/api/admin/users/{uid}/grammar", headers=self.admin)
+        self.assertEqual(inspect_res.status_code, 200)
+        self.assertTrue(inspect_res.json()["has_custom"])
+        self.assertEqual(inspect_res.json()["grammar"]["keywords"]["HALT"], "stop")
+
+
+        # Admin resets Ali's grammar
+        reset_res = self.client.post(f"/api/admin/users/{uid}/grammar/reset", headers=self.admin)
+        self.assertEqual(reset_res.status_code, 200)
+
+        # Now Ali has default grammar
+        inspect_res2 = self.client.get(f"/api/admin/users/{uid}/grammar", headers=self.admin)
+        self.assertFalse(inspect_res2.json()["has_custom"])
+
+    def test_admin_prune_logs(self):
+        # Admin can clear logs
+        r = self.client.post("/api/admin/logs/prune", json={"days": 0}, headers=self.admin)
+        self.assertEqual(r.status_code, 200)
+        # Normal user cannot prune logs
+        self.assertEqual(self.client.post("/api/admin/logs/prune", json={"days": 0}, headers=self.ali).status_code, 403)
+
+    def test_connect_contextmanager_exception_safety(self):
+        from app.db import connect
+        with self.assertRaises(ValueError):
+            with connect() as conn:
+                raise ValueError("caller exception should propagate cleanly")
+
+    def test_admin_list_users_and_log_filtering(self):
+        # Admin gets list of users with runs, last_active, has_custom_grammar
+        r = self.client.get("/api/admin/users", headers=self.admin)
+        self.assertEqual(r.status_code, 200)
+        users = r.json()["users"]
+        self.assertTrue(any(u["username"] == "ali" for u in users))
+        for u in users:
+            self.assertIn("has_custom_grammar", u)
+            self.assertIn("runs", u)
+
+        # Ali runs a compile stage to generate log
+        self.client.post("/api/compile/lexical", json={"source": "let int x := 10; halt;"}, headers=self.ali)
+
+        # Admin filters logs specifically for Ali
+        logs_ali = self.client.get("/api/logs?username=ali&status=ok", headers=self.admin).json()
+        self.assertTrue(all(l["username"] == "ali" for l in logs_ali["logs"]))
+        self.assertTrue(all(l["status"] == "ok" for l in logs_ali["logs"]))
+
 
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

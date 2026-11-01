@@ -18,7 +18,7 @@ def record(user: dict | None, action: str, status: str = "ok", detail: str = "",
              action, status, detail, program_hash, program_size))
 
 
-def fetch(user: dict, limit: int = 200, action: str = "", username: str = ""):
+def fetch(user: dict, limit: int = 200, action: str = "", username: str = "", status: str = ""):
     sql, args = "SELECT * FROM activity_log WHERE 1=1", []
     if user["role"] != "admin":                       # normal users only see their own history
         sql += " AND user_id = ?"; args.append(user["id"])
@@ -26,6 +26,9 @@ def fetch(user: dict, limit: int = 200, action: str = "", username: str = ""):
         sql += " AND username = ?"; args.append(username)
     if action:
         sql += " AND action = ?"; args.append(action)
-    sql += " ORDER BY id DESC LIMIT ?"; args.append(max(1, min(limit, 500)))
+    if status:
+        sql += " AND status = ?"; args.append(status)
+    sql += " ORDER BY id DESC LIMIT ?"; args.append(max(1, min(limit, 1000)))
     with connect() as conn:
         return [dict(r) for r in conn.execute(sql, args).fetchall()]
+

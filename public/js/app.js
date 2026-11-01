@@ -271,8 +271,14 @@ function showView(name) {
     el.hidden = !show;
   }
   $$(".nav-btn").forEach((b) => b.classList.toggle("is-active", b.dataset.view === name));
-  if (name === "activity") loadLogs();
-  if (name === "admin") loadUsers();
+  if (name === "activity") {
+    if (state.user && state.user.role === "admin") {
+      fillUserFilter();
+    }
+    loadLogs();
+  }
+  if (name === "admin") loadAdminDashboard();
+
   if (name === "guide") renderGuide();
   if (name === "auth" && typeof window._startAuthCompilerCanvas === "function") {
     window._startAuthCompilerCanvas();
@@ -1470,9 +1476,16 @@ function formatActionPhrase(log) {
 
 async function loadLogs() {
   const action = $("#log-filter").value, who = $("#log-user").value;
+  const status = $("#log-status") ? $("#log-status").value : "";
   try {
-    const res = await Api.get("/api/logs?limit=200" + (action ? "&action=" + action : "") + (who ? "&username=" + encodeURIComponent(who) : ""));
-    $("#log-scope").textContent = res.scope === "everyone" ? "Showing telemetry across all users" : "Showing your account history";
+    let url = "/api/logs?limit=300";
+    if (action) url += "&action=" + encodeURIComponent(action);
+    if (who) url += "&username=" + encodeURIComponent(who);
+    if (status) url += "&status=" + encodeURIComponent(status);
+    const res = await Api.get(url);
+    $("#log-scope").textContent = res.scope === "everyone"
+      ? (who ? `Showing telemetry filtered to user: ${who}` : "Showing telemetry across all users")
+      : "Showing your account history";
     
     if (!res.logs || !res.logs.length) {
       $("#log-body").innerHTML = `<div class="empty-state" style="padding:48px 20px">
@@ -1554,7 +1567,33 @@ async function loadLogs() {
 
 $("#log-filter").addEventListener("change", loadLogs);
 $("#log-user").addEventListener("change", loadLogs);
+if ($("#log-status")) $("#log-status").addEventListener("change", loadLogs);
 $("#log-refresh").addEventListener("click", loadLogs);
+
+const btnLogExport = $("#log-export-btn");
+if (btnLogExport) {
+  btnLogExport.addEventListener("click", async () => {
+    try {
+      const action = $("#log-filter").value, who = $("#log-user").value, status = $("#log-status") ? $("#log-status").value : "";
+      let url = "/api/logs?limit=1000";
+      if (action) url += "&action=" + encodeURIComponent(action);
+      if (who) url += "&username=" + encodeURIComponent(who);
+      if (status) url += "&status=" + encodeURIComponent(status);
+      const res = await Api.get(url);
+      const dataStr = JSON.stringify(res.logs || [], null, 2);
+      const blob = new Blob([dataStr], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `zynoscript_telemetry_${who || "all"}_${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast("Exported activity telemetry as JSON");
+    } catch (err) {
+      toast("Export failed: " + err.message);
+    }
+  });
+}
+
 
 /* ---------- Language Guide ---------- */
 function renderGuide() {
@@ -1599,33 +1638,113 @@ function ask({ title, text, password = false, confirm = "Confirm", danger = fals
 }
 
 async function fillUserFilter() {
-  const { users } = await Api.get("/api/admin/users");
-  $("#log-user").innerHTML = `<option value="">All users</option>` + users.map((u) => `<option>${esc(u.username)}</option>`).join("");
+  try {
+    const res = await Api.get("/api/admin/users");
+    if (!res || !res.users) return;
+    const current = $("#log-user").value;
+    const opts = `<option value="">All users</option>` + res.users.map((u) => `<option value="${esc(u.username)}">${esc(u.username)}</option>`).join("");
+    $("#log-user").innerHTML = opts;
+    if (current) $("#log-user").value = current;
+    if ($("#log-user")._enhanced) $("#log-user")._enhanced.rebuild();
+  } catch (err) {
+    console.warn("Could not load users for filter:", err);
+  }
+}
+
+let adminUsersCache = [];
+
+async function loadTelemetry() {
+  try {
+    const res = await Api.get("/api/admin/telemetry");
+    const t = res.telemetry;
+    if (!t) return;
+    if ($("#stat-total-users")) $("#stat-total-users").textContent = t.total_users;
+    if ($("#stat-users-meta")) $("#stat-users-meta").textContent = `${t.admin_users} admin · ${t.regular_users} standard`;
+    if ($("#stat-total-runs")) $("#stat-total-runs").textContent = t.total_runs;
+    if ($("#stat-runs-meta")) $("#stat-runs-meta").textContent = `${t.success_rate_pct}% pass rate (${t.total_success} ok / ${t.total_errors} err)`;
+    if ($("#stat-active-sessions")) $("#stat-active-sessions").textContent = t.active_sessions;
+    if ($("#stat-db-type")) $("#stat-db-type").textContent = (t.db_backend || "").split(" ")[0] || "Active";
+    if ($("#stat-db-meta")) $("#stat-db-meta").innerHTML = `<span class="live-dot ok"></span> ${esc(t.db_backend || "Connected")}`;
+
+    const stageEl = $("#admin-stage-stats");
+    if (stageEl) {
+      const stageLabels = { lexical: "Lexical", syntax: "Syntax", semantic: "Semantic", icg: "ICG", output: "Output" };
+      const pills = Object.entries(stageLabels).map(([key, label], idx) => {
+        const cnt = (t.stages && t.stages[key]) || 0;
+        return `<div class="stage-stat-pill">
+          <span class="stage-stat-name"><span class="stage-num">0${idx + 1}</span> ${label}</span>
+          <span class="stage-stat-count">${cnt} runs</span>
+        </div>`;
+      }).join("");
+      stageEl.innerHTML = pills;
+    }
+  } catch (err) {
+    console.warn("Telemetry fetch error:", err);
+  }
+}
+
+function renderUsersTable() {
+  const query = ($("#admin-user-search") ? $("#admin-user-search").value : "").trim().toLowerCase();
+  const roleFilter = $("#admin-role-filter") ? $("#admin-role-filter").value : "";
+
+  let filtered = adminUsersCache.filter((u) => {
+    if (query && !u.username.toLowerCase().includes(query)) return false;
+    if (roleFilter && u.role !== roleFilter) return false;
+    return true;
+  });
+
+  if (!filtered.length) {
+    $("#users-body").innerHTML = `<div class="empty-state" style="padding:32px 16px">
+      <div class="empty-glyph">${icon("users")}</div>
+      <p>${adminUsersCache.length === 0 ? "No registered users found." : "No users match your search."}</p>
+    </div>`;
+    return;
+  }
+
+  const rows = filtered.map((u) => {
+    const me = u.id === state.user.id;
+    const customGrammarBadge = u.has_custom_grammar
+      ? `<span class="badge ok" title="User has customized keywords or operators">Custom</span>`
+      : `<span class="badge" title="User uses default grammar">Default</span>`;
+
+    return `<tr>
+      <td><strong>${esc(u.username)}</strong>${me ? ' <span class="muted text-small">(you)</span>' : ""}</td>
+      <td><span class="badge ${u.role === 'admin' ? 'ok' : ''}">${esc(u.role)}</span></td>
+      <td class="mono text-muted text-small">${esc(u.created_at)}</td>
+      <td class="mono"><strong>${u.runs}</strong></td>
+      <td class="text-small">${esc(u.last_active || "never")}</td>
+      <td>${customGrammarBadge}</td>
+      <td>
+        <div class="cell-actions">
+          <button class="btn small ghost" data-act="view-logs" data-name="${esc(u.username)}" title="View ${esc(u.username)}'s activity stream">View Logs</button>
+          <button class="btn small ghost" data-act="inspect-grammar" data-id="${u.id}" data-name="${esc(u.username)}" title="Inspect language grammar">Grammar</button>
+          ${u.has_custom_grammar ? `<button class="btn small ghost" data-act="reset-grammar" data-id="${u.id}" data-name="${esc(u.username)}" title="Reset user grammar to default">Reset Grammar</button>` : ""}
+          <button class="btn small" data-act="password" data-id="${u.id}" data-name="${esc(u.username)}">Reset Pwd</button>
+          ${me ? "" : `
+            <button class="btn small" data-act="role" data-id="${u.id}" data-name="${esc(u.username)}" data-role="${u.role === "admin" ? "user" : "admin"}">Make ${u.role === "admin" ? "user" : "admin"}</button>
+            <button class="btn small danger" data-act="delete" data-id="${u.id}" data-name="${esc(u.username)}">Delete</button>
+          `}
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+
+  $("#users-body").innerHTML = `<table class="tbl"><thead><tr><th>User</th><th>Role</th><th>Registered (UTC)</th><th>Runs</th><th>Last Active</th><th>Grammar</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 async function loadUsers() {
   try {
     const { users } = await Api.get("/api/admin/users");
-    const rows = users.map((u) => {
-      const me = u.id === state.user.id;
-      return `<tr>
-        <td>${esc(u.username)}${me ? " (you)" : ""}</td>
-        <td><span class="badge ${u.role === 'admin' ? 'ok' : ''}">${esc(u.role)}</span></td>
-        <td>${esc(u.created_at)}</td>
-        <td>${u.runs}</td>
-        <td>${esc(u.last_active || "never")}</td>
-        <td><div class="cell-actions">
-          <button class="btn small" data-act="password" data-id="${u.id}" data-name="${esc(u.username)}">Reset Password</button>
-          ${me ? "" : `<button class="btn small" data-act="role" data-id="${u.id}" data-name="${esc(u.username)}" data-role="${u.role === "admin" ? "user" : "admin"}">Make ${u.role === "admin" ? "user" : "admin"}</button>
-          <button class="btn small danger" data-act="delete" data-id="${u.id}" data-name="${esc(u.username)}">Delete</button>`}
-        </div></td>
-      </tr>`;
-    }).join("");
-    $("#users-body").innerHTML = `<table class="tbl"><thead><tr><th>Username</th><th>Role</th><th>Registered (UTC)</th><th>Runs</th><th>Last Active</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table>`;
+    adminUsersCache = users || [];
+    renderUsersTable();
   } catch (err) {
     if (err.status === 401) leaveApp(err.message);
     else $("#users-body").innerHTML = `<p class="form-error" style="padding:16px">${esc(err.message)}</p>`;
   }
+}
+
+async function loadAdminDashboard() {
+  await Promise.all([loadTelemetry(), loadUsers()]);
 }
 
 $("#users-body").addEventListener("click", async (e) => {
@@ -1633,7 +1752,43 @@ $("#users-body").addEventListener("click", async (e) => {
   if (!b) return;
   const { act, id, name, role } = b.dataset;
   try {
-    if (act === "password") {
+    if (act === "view-logs") {
+      showView("activity");
+      $("#log-user").value = name;
+      if ($("#log-user")._enhanced) $("#log-user")._enhanced.syncValue();
+      loadLogs();
+      toast(`Showing activity for ${name}`);
+      return;
+    } else if (act === "inspect-grammar") {
+      const res = await Api.get(`/api/admin/users/${id}/grammar`);
+      const dlg = $("#dlg-grammar");
+      if (!dlg) return;
+      $("#dlg-grammar-title").textContent = `${name}'s Language Grammar`;
+      $("#dlg-grammar-sub").textContent = res.has_custom ? "Customized language keywords & operators" : "Using standard default ZynoScript grammar";
+      const g = res.grammar;
+      const kr = (state.grammar && state.grammar.keyword_roles) || {};
+      const or = (state.grammar && state.grammar.operator_roles) || {};
+      const kwRows = Object.entries(g.keywords || {}).map(([r, w]) => `<tr><td class="mono">${esc(r)}</td><td>${esc(kr[r] || "")}</td><td class="mono"><strong>${esc(w)}</strong></td></tr>`).join("");
+      const opRows = Object.entries(g.operators || {}).map(([r, w]) => `<tr><td class="mono">${esc(r)}</td><td>${esc(or[r] || "")}</td><td class="mono"><strong>${esc(w)}</strong></td></tr>`).join("");
+      $("#dlg-grammar-content").innerHTML = `
+        <div class="card-panel">
+          <header class="card-header"><h4>Keywords</h4></header>
+          <table class="tbl"><thead><tr><th>Role</th><th>Description</th><th>Token</th></tr></thead><tbody>${kwRows}</tbody></table>
+        </div>
+        <div class="card-panel">
+          <header class="card-header"><h4>Operators</h4></header>
+          <table class="tbl"><thead><tr><th>Role</th><th>Description</th><th>Token</th></tr></thead><tbody>${opRows}</tbody></table>
+        </div>
+      `;
+      dlg.showModal();
+      return;
+    } else if (act === "reset-grammar") {
+      if (!(await ask({ title: `Reset grammar for ${name}?`, text: `Revert ${name}'s keywords and operators back to default ZynoScript specification.`, confirm: "Reset Grammar" }))) return;
+      await Api.post(`/api/admin/users/${id}/grammar/reset`);
+      toast(`Grammar reset to default for ${name}`);
+      loadAdminDashboard();
+      return;
+    } else if (act === "password") {
       const pw = await ask({ title: "Reset Password", text: `Set a new password for ${name}. They will be logged out on all devices.`, password: true, confirm: "Reset Password" });
       if (pw === null) return;
       await Api.post(`/api/admin/users/${id}/password`, { password: pw });
@@ -1642,19 +1797,39 @@ $("#users-body").addEventListener("click", async (e) => {
       if (!(await ask({ title: `Change role for ${name}?`, text: `Set ${name}'s role to ${role}.`, confirm: "Update Role" }))) return;
       await Api.post(`/api/admin/users/${id}/role`, { role });
       toast(`${name} is now ${role}`);
-    } else {
+    } else if (act === "delete") {
       if (!(await ask({ title: `Delete user ${name}?`, text: "Their account and custom grammar will be permanently removed.", confirm: "Delete", danger: true }))) return;
       await Api.call("DELETE", `/api/admin/users/${id}`);
       toast(`${name} deleted`);
       fillUserFilter();
     }
-    loadUsers();
+    loadAdminDashboard();
   } catch (err) {
     toast(err.message);
   }
 });
 
-$("#users-refresh").addEventListener("click", loadUsers);
+$("#users-refresh").addEventListener("click", loadAdminDashboard);
+
+if ($("#admin-user-search")) $("#admin-user-search").addEventListener("input", renderUsersTable);
+if ($("#admin-role-filter")) $("#admin-role-filter").addEventListener("change", renderUsersTable);
+
+async function handlePrune(days, label) {
+  if (!(await ask({ title: `Prune telemetry logs (${label})?`, text: `This will permanently delete activity logs ${days === 0 ? 'completely' : 'older than ' + days + ' days'}. Registered user accounts are retained.`, confirm: "Prune Logs", danger: true }))) return;
+  try {
+    const res = await Api.post("/api/admin/logs/prune", { days });
+    toast(res.detail || "Logs pruned successfully");
+    loadAdminDashboard();
+    loadLogs();
+  } catch (err) {
+    toast(err.message);
+  }
+}
+
+if ($("#btn-prune-7d")) $("#btn-prune-7d").addEventListener("click", () => handlePrune(7, "> 7 days"));
+if ($("#btn-prune-30d")) $("#btn-prune-30d").addEventListener("click", () => handlePrune(30, "> 30 days"));
+if ($("#btn-prune-all")) $("#btn-prune-all").addEventListener("click", () => handlePrune(0, "ALL logs"));
+
 
 /* ---------- Application Start ---------- */
 (async function start() {
