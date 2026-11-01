@@ -1,5 +1,6 @@
 """Database access: hybrid manager supporting local SQLite and cloud PostgreSQL (Neon/Supabase)."""
 import os
+import re
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
@@ -148,15 +149,55 @@ class PgConnectionWrapper:
 
 
 def get_database_url() -> str:
-    url = os.getenv("DATABASE_URL", "").strip()
-    if (url.startswith('"') and url.endswith('"')) or (url.startswith("'") and url.endswith("'")):
-        url = url[1:-1].strip()
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
-    if url and "sslmode" not in url and ("neon.tech" in url or "supabase" in url):
-        sep = "&" if "?" in url else "?"
-        url += f"{sep}sslmode=require"
-    return url
+    candidates = [
+        os.getenv("DATABASE_URL", ""),
+        os.getenv("POSTGRES_URL", ""),
+        os.getenv("POSTGRES_URL_NON_POOLING", ""),
+        os.getenv("DATABASE_URL_UNPOOLED", ""),
+    ]
+
+    for raw in candidates:
+        if not raw:
+            continue
+        raw_str = raw.strip()
+        # Handle cases where full multi-line .env content or commented lines were pasted into Vercel
+        for line in raw_str.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            for prefix in ("DATABASE_URL=", "POSTGRES_URL=", "POSTGRES_URL_NON_POOLING=", "DATABASE_URL_UNPOOLED="):
+                if line.startswith(prefix):
+                    line = line[len(prefix):].strip()
+                    break
+            if (line.startswith('"') and line.endswith('"')) or (line.startswith("'") and line.endswith("'")):
+                line = line[1:-1].strip()
+            if "postgresql://" in line or "postgres://" in line:
+                m = re.search(r'(postgres(?:ql)?://[^\s"\'>]+)', line)
+                if m:
+                    candidate = m.group(1)
+                    if candidate.startswith("postgres://"):
+                        candidate = "postgresql://" + candidate[len("postgres://"):]
+                    if " #" in candidate:
+                        candidate = candidate.split(" #")[0].strip()
+                    if "sslmode" not in candidate and ("neon.tech" in candidate or "supabase" in candidate):
+                        sep = "&" if "?" in candidate else "?"
+                        candidate += f"{sep}sslmode=require"
+                    return candidate
+
+        # Regex fallback across the entire raw string if not split cleanly
+        m = re.search(r'(postgres(?:ql)?://[^\s"\'>]+)', raw_str)
+        if m:
+            candidate = m.group(1)
+            if candidate.startswith("postgres://"):
+                candidate = "postgresql://" + candidate[len("postgres://"):]
+            if " #" in candidate:
+                candidate = candidate.split(" #")[0].strip()
+            if "sslmode" not in candidate and ("neon.tech" in candidate or "supabase" in candidate):
+                sep = "&" if "?" in candidate else "?"
+                candidate += f"{sep}sslmode=require"
+            return candidate
+
+    return ""
 
 
 _db_initialized = False
@@ -174,23 +215,27 @@ def connect():
     ensure_db()
     db_url = get_database_url()
     if db_url and psycopg2 is not None:
-        raw_conn = psycopg2.connect(db_url, connect_timeout=10)
-        wrapped = PgConnectionWrapper(raw_conn)
         try:
-            yield wrapped
-            wrapped.commit()
-        finally:
-            wrapped.close()
-    else:
-        conn = sqlite3.connect(DB_PATH, timeout=10.0)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON;")
-        conn.execute("PRAGMA busy_timeout = 5000;")
-        try:
-            yield conn
-            conn.commit()
-        finally:
-            conn.close()
+            raw_conn = psycopg2.connect(db_url, connect_timeout=10)
+            wrapped = PgConnectionWrapper(raw_conn)
+            try:
+                yield wrapped
+                wrapped.commit()
+            finally:
+                wrapped.close()
+            return
+        except Exception as pg_err:
+            print(f"Warning: PostgreSQL connection failed ({pg_err}), falling back to SQLite: {DB_PATH}")
+
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute("PRAGMA busy_timeout = 5000;")
+    try:
+        yield conn
+        conn.commit()
+    finally:
+        conn.close()
 
 
 def init_db():
@@ -201,15 +246,16 @@ def init_db():
                 with conn.cursor() as cur:
                     cur.execute(PG_SCHEMA)
                 conn.commit()
+            return
         except Exception as e:
             print(f"Warning: PostgreSQL schema initialization error: {e}")
-    else:
-        try:
-            DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-            conn = sqlite3.connect(DB_PATH, timeout=10.0)
-            conn.execute("PRAGMA journal_mode = WAL;")
-            conn.executescript(SQLITE_SCHEMA)
-            conn.commit()
-            conn.close()
-        except Exception as e:
-            print(f"Warning: SQLite schema initialization error: {e}")
+
+    try:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(DB_PATH, timeout=10.0)
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.executescript(SQLITE_SCHEMA)
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Warning: SQLite schema initialization error: {e}")

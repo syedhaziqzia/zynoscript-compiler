@@ -123,6 +123,28 @@ class ApiTests(unittest.TestCase):
         r = self.client.post("/api/index.py?__path=unknown_stage", json={})
         self.assertEqual(r.status_code, 404)
 
+    def test_database_url_comment_sanitization(self):
+        import os
+        from app.db import get_database_url
+        old_val = os.environ.get("DATABASE_URL")
+        try:
+            # Simulate multi-line pasted .env with comments
+            os.environ["DATABASE_URL"] = (
+                "# Cloud PostgreSQL database connection string\n"
+                "DATABASE_URL=postgresql://neondb_owner:secret@ep-xyz.us-east-1.aws.neon.tech/neondb?sslmode=require"
+            )
+            url = get_database_url()
+            self.assertEqual(url, "postgresql://neondb_owner:secret@ep-xyz.us-east-1.aws.neon.tech/neondb?sslmode=require")
+
+            # Comment only
+            os.environ["DATABASE_URL"] = "# Just a comment"
+            self.assertEqual(get_database_url(), "")
+        finally:
+            if old_val is not None:
+                os.environ["DATABASE_URL"] = old_val
+            else:
+                os.environ.pop("DATABASE_URL", None)
+
 
 if __name__ == "__main__":
     unittest.main()
