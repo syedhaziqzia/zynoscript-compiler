@@ -11,7 +11,7 @@
 <p align="center">
   <a href="#features"><img src="https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white" alt="Python Version"/></a>
   <a href="#features"><img src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI"/></a>
-  <a href="#testing"><img src="https://img.shields.io/badge/Tests-33%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
+  <a href="#testing"><img src="https://img.shields.io/badge/Tests-40%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
   <a href="#production-deployment"><img src="https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel&logoColor=white" alt="Vercel"/></a>
   <a href="#production-deployment"><img src="https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=white" alt="Neon Postgres"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT"/></a>
@@ -20,30 +20,6 @@
 <p align="center">
   <img src="frontend/assets/compiler-workbench.png" alt="ZynoScript Compiler Workbench" width="100%" style="border-radius: 12px; border: 1px solid #e1e4e8; box-shadow: 0 10px 30px rgba(0,0,0,0.08);"/>
 </p>
-
----
-
-## 📑 Table of Contents
-
-- [Overview](#-overview)
-- [Interface Showcase](#-interface-showcase)
-- [System Architecture](#-system-architecture)
-- [Key Features](#-key-features)
-- [The ZynoScript Language](#-the-zynoscript-language)
-  - [Language Cheat Sheet](#language-cheat-sheet)
-  - [Sample Code](#sample-code)
-- [Compiler Engine Contracts](#-compiler-engine-contracts)
-- [Dynamic Grammar Editing](#-dynamic-grammar-editing)
-- [Security & Concurrency](#-security--concurrency)
-- [Project Structure](#-project-structure)
-- [Quick Start](#-quick-start)
-  - [Prerequisites](#prerequisites)
-  - [Local Installation](#local-installation)
-  - [Running the Test Suite](#running-the-test-suite)
-- [Production Deployment](#-production-deployment)
-  - [Deploying to Render](#deploying-to-render)
-  - [Environment Variables](#environment-variables)
-- [License](#-license)
 
 ---
 
@@ -61,25 +37,25 @@
 
 ## 📸 Interface Showcase
 
-### 1. Interactive Compiler Workbench
+### 1. Welcome & Authentication Gateway
+The user entry portal featuring secure registration and login, session persistence controls, sample program previews, and dynamic AST/TAC ambient background visuals:
+
+<p align="center">
+  <img src="frontend/assets/welcome-auth.png" alt="ZynoScript Welcome & Sign In" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
+</p>
+
+### 2. Interactive Compiler Workbench
 The central IDE environment featuring a dedicated source editor with line numbering, example presets, real-time stage tabs (Lexical, Syntax, Semantic, ICG, Output), an execution console, and runtime variable inspection:
 
 <p align="center">
   <img src="frontend/assets/compiler-workbench.png" alt="ZynoScript Compiler Workbench" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
 </p>
 
-### 2. Language Reference & Specification Guide
+### 3. Language Reference & Specification Guide
 An integrated, in-app specification sheet outlining all active keyword mappings, operator overrides, data type equivalents, and formal grammar rules:
 
 <p align="center">
   <img src="frontend/assets/language-reference.png" alt="ZynoScript Language Reference" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
-</p>
-
-### 3. Welcome & Authentication Gateway
-The user entry portal featuring secure registration and login, session persistence controls, sample program previews, and dynamic AST/TAC ambient background visuals:
-
-<p align="center">
-  <img src="frontend/assets/welcome-auth.png" alt="ZynoScript Welcome & Sign In" width="100%" style="border-radius: 10px; border: 1px solid #e1e4e8;"/>
 </p>
 
 ---
@@ -306,13 +282,16 @@ zynoscript-compiler/
    * Interactive Swagger Docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 > [!TIP]
-> The very first account registered on a fresh deployment is automatically promoted to **Admin** role with full access to user management and system-wide telemetry.
+> **Administrator Setup & Forking Guide:**
+> * **Environment Seeding (Recommended):** To provision an initial admin account on your deployment (e.g., Vercel or local `.env`), define `ADMIN_USERNAME` and `ADMIN_PASSWORD` in your environment variables. The server will seed this account on startup with salted PBKDF2 password hashing.
+> * **Zero-Config First-User Fallback:** If you do not configure `ADMIN_USERNAME` in your environment, the very first account registered through the web UI is automatically promoted to the **Admin** role.
+> * **UI Management & Security:** Once logged in, admins can open the **Admin Panel** to inspect real-time compiler telemetry, view cross-user audit logs, reset user passwords, or update their own password. No default credentials exist in the source code, ensuring public forks remain completely secure.
 
 ---
 
 ### Running the Test Suite
 
-Execute the comprehensive test suite (27 automated tests covering engines, APIs, auth, and security boundaries):
+Execute the comprehensive test suite (40 automated tests covering engines, APIs, auth, security headers, and permission boundaries):
 
 ```bash
 python -m unittest discover tests
@@ -332,6 +311,7 @@ This repository includes [`vercel.json`](vercel.json) and a hybrid database mana
 4. In Vercel's **Environment Variables** section, add:
    * **Key:** `DATABASE_URL`
    * **Value:** *(your Neon connection string `postgresql://...`)*
+   * *(Optional)* **Key:** `ADMIN_USERNAME` and `ADMIN_PASSWORD` *(to seed your custom administrative account)*
 5. Click **Deploy**. Vercel will host the frontend on edge CDN and execute compiler API endpoints as serverless functions with permanent cloud database storage.
 
 ### Environment Variables
@@ -339,6 +319,8 @@ This repository includes [`vercel.json`](vercel.json) and a hybrid database mana
 | Variable | Default | Description |
 |---|---|---|
 | `DATABASE_URL` | *(none - falls back to SQLite)* | PostgreSQL connection URL (e.g. Neon or Supabase) |
+| `ADMIN_USERNAME` | *(empty)* | Optional username to automatically seed as Administrator |
+| `ADMIN_PASSWORD` | *(empty)* | Optional password for the initial seed Administrator account |
 | `DB_PATH` | `data/zynoscript.db` | Filesystem path for the SQLite database (when `DATABASE_URL` is omitted) |
 | `CORS_ORIGINS` | `*` | Comma-separated list of allowed CORS origins |
 | `SESSION_HOURS` | `12` | Session lifetime for standard logins |

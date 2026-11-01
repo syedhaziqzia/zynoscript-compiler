@@ -53,9 +53,9 @@ async def restore_vercel_path(request: Request, call_next):
     except Exception as exc:
         import traceback
         traceback.print_exc()
-        return JSONResponse(
+        resp = JSONResponse(
             status_code=500,
-            content={"detail": f"{type(exc).__name__}: {str(exc)}"},
+            content={"detail": "Internal server error"},
         )
     if resp.status_code == 405 and request.scope["path"].startswith("/api"):
         resp = JSONResponse({"detail": "Not Found"}, status_code=404)

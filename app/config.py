@@ -15,6 +15,7 @@ REMEMBER_DAYS = int(os.getenv("REMEMBER_DAYS", "30"))            # lifetime when
 MAX_SOURCE_CHARS = int(os.getenv("MAX_SOURCE_CHARS", "20000"))   # largest program accepted by the compiler endpoints
 PASSWORD_MIN_LEN = int(os.getenv("PASSWORD_MIN_LEN", "6"))
 CORS_ORIGINS = [orig.strip() for orig in os.getenv("CORS_ORIGINS", "*").split(",") if orig.strip()]
-DEFAULT_ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "zyno_admin").strip()
-DEFAULT_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "Zyno#Studio$Secure2026!").strip()
+DEFAULT_ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "").strip()
+DEFAULT_ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "").strip()
+
 

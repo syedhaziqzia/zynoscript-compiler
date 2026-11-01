@@ -257,6 +257,10 @@ def seed_admin_user(conn_or_cur, is_pg: bool = False):
     from .auth import hash_password, new_salt
     from .config import DEFAULT_ADMIN_PASSWORD, DEFAULT_ADMIN_USERNAME
 
+    # Only seed if an admin username and password are provided in the environment
+    if not DEFAULT_ADMIN_USERNAME or not DEFAULT_ADMIN_PASSWORD:
+        return
+
     try:
         if is_pg:
             conn_or_cur.execute("SELECT id FROM users WHERE username = %s", (DEFAULT_ADMIN_USERNAME,))
@@ -267,11 +271,11 @@ def seed_admin_user(conn_or_cur, is_pg: bool = False):
                     "INSERT INTO users (username, password_hash, salt, role) VALUES (%s, %s, %s, 'admin')",
                     (DEFAULT_ADMIN_USERNAME, pwd_hash, salt)
                 )
-            # Demote any accidental admin accounts that are not DEFAULT_ADMIN_USERNAME
-            conn_or_cur.execute(
-                "UPDATE users SET role = 'user' WHERE username != %s AND role = 'admin'",
-                (DEFAULT_ADMIN_USERNAME,)
-            )
+            else:
+                conn_or_cur.execute(
+                    "UPDATE users SET role = 'admin' WHERE username = %s",
+                    (DEFAULT_ADMIN_USERNAME,)
+                )
         else:
             cur = conn_or_cur.execute("SELECT id FROM users WHERE username = ?", (DEFAULT_ADMIN_USERNAME,))
             if not cur.fetchone():
@@ -281,12 +285,14 @@ def seed_admin_user(conn_or_cur, is_pg: bool = False):
                     "INSERT INTO users (username, password_hash, salt, role) VALUES (?, ?, ?, 'admin')",
                     (DEFAULT_ADMIN_USERNAME, pwd_hash, salt)
                 )
-            conn_or_cur.execute(
-                "UPDATE users SET role = 'user' WHERE username != ? AND role = 'admin'",
-                (DEFAULT_ADMIN_USERNAME,)
-            )
+            else:
+                conn_or_cur.execute(
+                    "UPDATE users SET role = 'admin' WHERE username = ?",
+                    (DEFAULT_ADMIN_USERNAME,)
+                )
     except Exception as e:
         print(f"Warning: seed_admin_user failed: {e}")
+
 
 
 def init_db():

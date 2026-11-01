@@ -652,13 +652,16 @@ $("#pw-toggle").addEventListener("click", (e) => {
         return {
           x,
           y,
-          vx: (Math.random() - 0.5) * 0.32,
-          vy: (Math.random() - 0.5) * 0.32,
+          vx: (Math.random() - 0.5) * 0.20,
+          vy: (Math.random() - 0.5) * 0.20,
           text: item.text,
           tag: item.tag,
           type: item.type,
           baseAlpha: 0.40 + Math.random() * 0.22,
-          size: item.type === "AST" || item.type === "STAGE" ? 12.5 : 11.5
+          size: item.type === "AST" || item.type === "STAGE" ? 12.5 : 11.5,
+          phase: Math.random() * Math.PI * 2,
+          driftSpeed: 0.006 + Math.random() * 0.006,
+          radius: Math.max(16, (item.text.length * 6.5) / 2)
         };
       }
     }
@@ -666,13 +669,16 @@ $("#pw-toggle").addEventListener("click", (e) => {
     return {
       x: 15 + Math.random() * (width - 30),
       y: Math.random() < 0.5 ? 15 + Math.random() * 80 : Math.max(15, height - 90) + Math.random() * 75,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
+      vx: (Math.random() - 0.5) * 0.20,
+      vy: (Math.random() - 0.5) * 0.20,
       text: item.text,
       tag: item.tag,
       type: item.type,
       baseAlpha: 0.40 + Math.random() * 0.22,
-      size: 11.5
+      size: 11.5,
+      phase: Math.random() * Math.PI * 2,
+      driftSpeed: 0.006 + Math.random() * 0.006,
+      radius: Math.max(16, (item.text.length * 6.5) / 2)
     };
   }
 
@@ -704,13 +710,13 @@ $("#pw-toggle").addEventListener("click", (e) => {
     trailParticles.push({
       x: x + (Math.random() - 0.5) * 20,
       y: y + (Math.random() - 0.5) * 20,
-      vy: -0.7 - Math.random() * 0.5,
-      vx: (Math.random() - 0.5) * 0.5,
+      vy: -0.5 - Math.random() * 0.3,
+      vx: (Math.random() - 0.5) * 0.3,
       text: item.text,
       tag: item.tag,
       alpha: 0.85,
       life: 1,
-      decay: 0.022 + Math.random() * 0.012,
+      decay: 0.020 + Math.random() * 0.010,
       size: 11.5
     });
   }
@@ -819,19 +825,67 @@ $("#pw-toggle").addEventListener("click", (e) => {
       }
     }
 
-    // 2. Update and organize compiler nodes
+    // 2. Inter-node soft collision resolution (gentle deflection so colliding elements smoothly part ways)
+    for (let i = 0; i < nodes.length; i++) {
+      const n1 = nodes[i];
+      for (let j = i + 1; j < nodes.length; j++) {
+        const n2 = nodes[j];
+        const dx = n2.x - n1.x;
+        const dy = n2.y - n1.y;
+        const dist = Math.hypot(dx, dy);
+        const minDist = (n1.radius || 18) + (n2.radius || 18);
+
+        if (dist > 0 && dist < minDist) {
+          const nx = dx / dist;
+          const ny = dy / dist;
+          const overlap = minDist - dist;
+
+          // Soft position nudge to gracefully avoid overlapping
+          const nudge = Math.min(overlap * 0.035, 0.45);
+          n1.x -= nx * nudge;
+          n1.y -= ny * nudge;
+          n2.x += nx * nudge;
+          n2.y += ny * nudge;
+
+          // Very slight velocity deflection off each other's path
+          const impulse = 0.012 * (overlap / minDist);
+          n1.vx -= nx * impulse;
+          n1.vy -= ny * impulse;
+          n2.vx += nx * impulse;
+          n2.vy += ny * impulse;
+        }
+      }
+    }
+
+    // 3. Update and organize compiler nodes
     const influenceRadius = 230;
     const nearbyNodes = [];
 
     for (let i = 0; i < nodes.length; i++) {
       const n = nodes[i];
-      n.x += n.vx;
-      n.y += n.vy;
 
-      if (n.x < -40) n.x = width + 40;
-      else if (n.x > width + 40) n.x = -40;
-      if (n.y < -40) n.y = height + 40;
-      else if (n.y > height + 40) n.y = -40;
+      // Smooth organic wave drift for calm, fluid floating
+      n.phase = (n.phase || 0) + (n.driftSpeed || 0.008);
+      const wobbleX = Math.cos(n.phase) * 0.045;
+      const wobbleY = Math.sin(n.phase) * 0.045;
+
+      n.x += n.vx + wobbleX;
+      n.y += n.vy + wobbleY;
+
+      // Soft velocity damping so collisions settle smoothly without jitter
+      const currentSpeed = Math.hypot(n.vx, n.vy);
+      if (currentSpeed > 0.22) {
+        n.vx *= 0.985;
+        n.vy *= 0.985;
+      } else if (currentSpeed < 0.06) {
+        n.vx += (Math.random() - 0.5) * 0.015;
+        n.vy += (Math.random() - 0.5) * 0.015;
+      }
+
+      if (n.x < -45) n.x = width + 45;
+      else if (n.x > width + 45) n.x = -45;
+      if (n.y < -45) n.y = height + 45;
+      else if (n.y > height + 45) n.y = -45;
 
       // Gentle steering away from content boxes so nodes stay naturally in open channels
       for (let j = 0; j < boxes.length; j++) {
@@ -840,10 +894,10 @@ $("#pw-toggle").addEventListener("click", (e) => {
         const cy = (b.top + b.bottom) / 2;
         if (n.x >= b.left - 12 && n.x <= b.right + 12 && n.y >= b.top - 12 && n.y <= b.bottom + 12) {
           const angle = Math.atan2(n.y - cy, n.x - cx);
-          n.x += Math.cos(angle) * 1.2;
-          n.y += Math.sin(angle) * 1.2;
-          n.vx += Math.cos(angle) * 0.03;
-          n.vy += Math.sin(angle) * 0.03;
+          n.x += Math.cos(angle) * 0.7;
+          n.y += Math.sin(angle) * 0.7;
+          n.vx += Math.cos(angle) * 0.015;
+          n.vy += Math.sin(angle) * 0.015;
         }
       }
 

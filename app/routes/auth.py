@@ -39,7 +39,7 @@ def session_for(user_id: int, remember: bool) -> str:
 
 @router.post("/register", status_code=201)
 def register(body: Credentials):
-    if body.username.lower() == DEFAULT_ADMIN_USERNAME.lower():
+    if DEFAULT_ADMIN_USERNAME and body.username.lower() == DEFAULT_ADMIN_USERNAME.lower():
         raise HTTPException(
             status_code=400,
             detail=f"The username '{body.username}' is reserved for system administration. Please choose a different username."
@@ -47,11 +47,14 @@ def register(body: Credentials):
     salt = new_salt()
     try:
         with connect() as conn:
+            user_count_row = conn.execute("SELECT COUNT(*) FROM users").fetchone()
+            user_count = user_count_row[0] if user_count_row else 0
+            assigned_role = "admin" if user_count == 0 else "user"
             cur = conn.execute(
-                "INSERT INTO users (username, password_hash, salt, role) VALUES (?, ?, ?, 'user')",
-                (body.username, hash_password(body.password, salt), salt)
+                "INSERT INTO users (username, password_hash, salt, role) VALUES (?, ?, ?, ?)",
+                (body.username, hash_password(body.password, salt), salt, assigned_role)
             )
-            user = {"id": cur.lastrowid, "username": body.username, "role": "user"}
+            user = {"id": cur.lastrowid, "username": body.username, "role": assigned_role}
     except DbIntegrityError:
         raise HTTPException(
             status_code=409,

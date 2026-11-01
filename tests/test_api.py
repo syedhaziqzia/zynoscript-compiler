@@ -1,7 +1,11 @@
 """API tests: login, per-stage compile, grammar editing, logs.   Run:  python -m unittest discover tests"""
+import os
 import tempfile
 import unittest
 from pathlib import Path
+
+os.environ["ADMIN_USERNAME"] = "test_admin"
+os.environ["ADMIN_PASSWORD"] = "Test#Pass2026!"
 
 from fastapi.testclient import TestClient
 
@@ -12,6 +16,7 @@ db.DB_PATH = config.DB_PATH
 from app.main import app  # noqa: E402
 
 GOOD = "let whole a := 5;\nbeam a +~ 1;\nhalt;"
+
 
 
 class ApiTests(unittest.TestCase):
@@ -246,6 +251,29 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(r.headers.get("X-Content-Type-Options"), "nosniff")
         self.assertEqual(r.headers.get("X-XSS-Protection"), "1; mode=block")
         self.assertEqual(r.headers.get("Referrer-Policy"), "strict-origin-when-cross-origin")
+
+    def test_first_user_admin_promotion_logic(self):
+        from contextlib import contextmanager
+        import sqlite3
+        from unittest.mock import patch
+        from app.db import SQLITE_SCHEMA
+        from app.routes.auth import register, Credentials
+
+        mem_conn = sqlite3.connect(":memory:")
+        mem_conn.row_factory = sqlite3.Row
+        mem_conn.executescript(SQLITE_SCHEMA)
+
+        @contextmanager
+        def mem_connect():
+            yield mem_conn
+
+        with patch("app.routes.auth.connect", mem_connect), patch("app.routes.auth.logs.record"):
+            res1 = register(Credentials(username="founder_admin", password="password123"))
+            self.assertEqual(res1["user"]["role"], "admin")
+            res2 = register(Credentials(username="second_dev", password="password123"))
+            self.assertEqual(res2["user"]["role"], "user")
+
+        mem_conn.close()
 
 
 if __name__ == "__main__":
