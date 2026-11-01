@@ -17,7 +17,7 @@ from ..auth import (
     verify_password,
 )
 from ..config import PASSWORD_MIN_LEN, REMEMBER_DAYS, SESSION_HOURS
-from ..db import connect
+from ..db import DbIntegrityError, connect
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -41,7 +41,7 @@ def register(body: Credentials):
             cur = conn.execute("INSERT INTO users (username, password_hash, salt, role) VALUES (?, ?, ?, ?)",
                                (body.username, hash_password(body.password, salt), salt, "admin" if first else "user"))
             user = {"id": cur.lastrowid, "username": body.username, "role": "admin" if first else "user"}
-    except sqlite3.IntegrityError:
+    except DbIntegrityError:
         raise HTTPException(409, "That username is taken. Pick another one.")
     logs.record(user, "register")
     return {"token": session_for(user["id"], body.remember), "user": user}

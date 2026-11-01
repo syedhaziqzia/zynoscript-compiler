@@ -12,7 +12,8 @@
   <a href="#features"><img src="https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white" alt="Python Version"/></a>
   <a href="#features"><img src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI"/></a>
   <a href="#testing"><img src="https://img.shields.io/badge/Tests-27%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
-  <a href="#deployment"><img src="https://img.shields.io/badge/Deploy-Render%20Ready-46E3B7?logo=render&logoColor=white" alt="Render"/></a>
+  <a href="#production-deployment"><img src="https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel&logoColor=white" alt="Vercel"/></a>
+  <a href="#production-deployment"><img src="https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=white" alt="Neon Postgres"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT"/></a>
 </p>
 
@@ -241,6 +242,8 @@ zynoscript-compiler/
 │       ├── grammar.py           # Grammar read/update/reset endpoints
 │       ├── logs.py              # Activity audit query endpoint
 │       └── admin.py             # Administrative controls & user management
+├── api/                         # Vercel serverless function entry point
+│   └── index.py
 ├── frontend/                    # Browser-based workbench (no build step needed)
 │   ├── index.html               # Single-page studio interface
 │   ├── css/style.css            # Custom CSS design system
@@ -256,7 +259,7 @@ zynoscript-compiler/
 │   └── test_engines.py          # Isolated compiler engine unit tests
 ├── data/                        # SQLite storage directory (.gitkeep tracked)
 ├── .env.example                 # Environment configuration template
-├── render.yaml                  # 1-Click Render deployment blueprint
+├── vercel.json                  # Vercel routing configuration
 ├── requirements.txt             # Minimal Python dependencies
 └── README.md                    # Project documentation
 ```
@@ -319,23 +322,24 @@ python -m unittest discover tests
 
 ## 🌐 Production Deployment
 
-### Deploying to Render
+### Deploying to Vercel (Recommended - 100% Free with Neon PostgreSQL)
 
-This repository includes a [render.yaml](render.yaml) blueprint for zero-friction deployment:
+This repository includes [`vercel.json`](vercel.json) and a hybrid database manager ready for serverless execution:
 
-1. Push your code to your GitHub account.
-2. Sign in to [Render](https://dashboard.render.com).
-3. Click **New +** > **Blueprint**.
-4. Connect your `zynoscript-compiler` repository and click **Apply**.
-5. Render will automatically detect the settings, install dependencies, and launch Uvicorn with your live HTTPS URL.
+1. Create a free project at [Neon.tech](https://neon.tech) and copy your `DATABASE_URL`.
+2. Push this repository to your GitHub account.
+3. Import the repository in [Vercel](https://vercel.com) (Hobby plan).
+4. In Vercel's **Environment Variables** section, add:
+   * **Key:** `DATABASE_URL`
+   * **Value:** *(your Neon connection string `postgresql://...`)*
+5. Click **Deploy**. Vercel will host the frontend on edge CDN and execute compiler API endpoints as serverless functions with permanent cloud database storage.
 
 ### Environment Variables
 
-You can optionally configure settings via environment variables (or a `.env` file):
-
 | Variable | Default | Description |
 |---|---|---|
-| `DB_PATH` | `data/zynoscript.db` | Filesystem path for the SQLite database file |
+| `DATABASE_URL` | *(none - falls back to SQLite)* | PostgreSQL connection URL (e.g. Neon or Supabase) |
+| `DB_PATH` | `data/zynoscript.db` | Filesystem path for the SQLite database (when `DATABASE_URL` is omitted) |
 | `CORS_ORIGINS` | `*` | Comma-separated list of allowed CORS origins |
 | `SESSION_HOURS` | `12` | Session lifetime for standard logins |
 | `REMEMBER_DAYS` | `30` | Session lifetime when "Remember me" is checked |
