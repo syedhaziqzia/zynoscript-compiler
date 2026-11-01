@@ -58,8 +58,15 @@ async def restore_vercel_path(request: Request, call_next):
             content={"detail": f"{type(exc).__name__}: {str(exc)}"},
         )
     if resp.status_code == 405 and request.scope["path"].startswith("/api"):
-        return JSONResponse({"detail": "Not Found"}, status_code=404)
+        resp = JSONResponse({"detail": "Not Found"}, status_code=404)
+
+    # Standard production cybersecurity headers
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["X-XSS-Protection"] = "1; mode=block"
+    resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return resp
+
 
 
 app.add_middleware(

@@ -240,9 +240,17 @@ class ApiTests(unittest.TestCase):
         wrapper.execute("SELECT * FROM activity_log WHERE action LIKE 'run_%'")
         mock_raw.execute.assert_called_once_with("SELECT * FROM activity_log WHERE action LIKE 'run_%'")
 
+    def test_security_headers(self):
+        r = self.client.get("/api/auth/me")
+        self.assertEqual(r.headers.get("X-Frame-Options"), "DENY")
+        self.assertEqual(r.headers.get("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(r.headers.get("X-XSS-Protection"), "1; mode=block")
+        self.assertEqual(r.headers.get("Referrer-Policy"), "strict-origin-when-cross-origin")
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 
 
