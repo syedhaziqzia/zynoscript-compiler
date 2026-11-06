@@ -359,17 +359,25 @@ async function enterApp(user) {
   $("#who-role").textContent = `${user.role} account`;
   $("#who-avatar").textContent = user.username.slice(0, 1).toUpperCase();
   const isAdmin = user.role === "admin";
-  const gram = await Api.get("/api/grammar");
-  setGrammar(gram);
-  if (isAdmin) {
-    try { await fillUserFilter(); } catch { /* filter optional */ }
-  }
   const topbar = $("#topbar");
   if (topbar) topbar.hidden = false;
   $("#nav").hidden = $("#whoami").hidden = $("#cmd-trigger").hidden = false;
   $("#nav-admin").hidden = $("#log-user").hidden = !isAdmin;
+
+  // Immediately render workbench so refresh and login feel instantaneous
   showView("workbench");
   if (typeof toggleProfileDropdown === "function") toggleProfileDropdown(false);
+
+  // Fetch user-custom grammar & filters in parallel
+  try {
+    const [gram] = await Promise.all([
+      Api.get("/api/grammar"),
+      isAdmin ? fillUserFilter().catch(() => {}) : Promise.resolve()
+    ]);
+    if (gram) setGrammar(gram);
+  } catch (err) {
+    console.warn("Background grammar load:", err);
+  }
 }
 
 function leaveApp(message) {
@@ -523,6 +531,13 @@ $("#pw-toggle").addEventListener("click", (e) => {
   };
 
   // Get tight bounding boxes of individual text and card elements (no gigantic dead blocks)
+  let cachedBoxes = null;
+  function updateContentBoxes() {
+    if (authView.hidden) return [];
+    cachedBoxes = getContentBoxes();
+    return cachedBoxes;
+  }
+
   function getContentBoxes() {
     const canvasRect = canvas.getBoundingClientRect();
     const boxes = [];
@@ -709,8 +724,9 @@ $("#pw-toggle").addEventListener("click", (e) => {
     canvas.style.height = `${height}px`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const boxes = getContentBoxes();
-    const targetCount = Math.min(68, Math.max(48, Math.floor((width * height) / 16000)));
+    const boxes = updateContentBoxes();
+    const isMobile = width < 768 || ('ontouchstart' in window);
+    const targetCount = isMobile ? Math.min(22, Math.max(14, Math.floor((width * height) / 30000))) : Math.min(64, Math.max(44, Math.floor((width * height) / 16000)));
     nodes = [];
     for (let i = 0; i < targetCount; i++) {
       const item = COMPILER_DATA[i % COMPILER_DATA.length];
@@ -757,7 +773,7 @@ $("#pw-toggle").addEventListener("click", (e) => {
     mouse.y = ny;
     mouse.active = true;
 
-    const boxes = getContentBoxes();
+    const boxes = cachedBoxes || updateContentBoxes();
     if (speed > 6 && Math.random() < 0.45) {
       addTrailParticle(nx, ny, boxes);
     }
@@ -787,11 +803,12 @@ $("#pw-toggle").addEventListener("click", (e) => {
 
   function render() {
     if (authView.hidden) {
+      if (animId) cancelAnimationFrame(animId);
       animId = null;
       return;
     }
 
-    const boxes = getContentBoxes();
+    const boxes = cachedBoxes || updateContentBoxes();
 
     ctx.clearRect(0, 0, width, height);
 
