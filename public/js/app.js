@@ -80,7 +80,7 @@ function zsTypeLabel(g, canonical) {
 }
 
 function zsEscRegex(s) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\const compileCache = new Map();");
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function zsRunLexical(source, grammar) {
@@ -2112,7 +2112,7 @@ async function runStage(stage) {
     if (err.status === 401) return leaveApp(err.message);
     $("#output").innerHTML = `<p class="form-error">${esc(err.message)}</p>`;
   } finally {
-    $(".stage, #run-all, #btn-run-editor").forEach((b) => {
+    $$(".stage, #run-all, #btn-run-editor").forEach((b) => {
       b.disabled = false;
       b.classList.remove("is-running");
     });
