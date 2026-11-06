@@ -1,4 +1,4 @@
-﻿/* ZynoScript Compiler Studio - Minimal Black & White Theme */
+/* ZynoScript Compiler Studio - Minimal Black & White Theme */
 :root {
   --bg: #ffffff;
   --bg-canvas: #f8f9fa;
@@ -3185,6 +3185,438 @@ dialog.dlg-grammar .dlg-grammar-body {
   flex-direction: column;
   gap: 16px;
 }
+
+/* =========================================
+   V6.0 ENHANCEMENTS: SYNTAX HIGHLIGHTING,
+   RESIZABLE SPLIT, MOBILE TABS, DARK MODE,
+   INLINE ERROR MARKERS & SUBTLE ANIMATIONS
+   ========================================= */
+
+/* 1. Topbar Icon Pill Buttons (? Shortcuts & Dark Mode) */
+.icon-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line);
+  background: var(--bg-subtle);
+  color: var(--ink-secondary);
+  font: 700 13px var(--font-mono);
+  cursor: pointer;
+  transition: var(--transition);
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.icon-pill-btn:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+  background: var(--bg);
+}
+
+/* 2. Live Syntax Highlighting Editor Backdrop & Overlay */
+.code-stage-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.code-stage-wrap .code-highlight,
+.code-stage-wrap .code-textarea {
+  margin: 0;
+  padding: 14px 16px;
+  font: 13px/1.65 var(--font-mono);
+  tab-size: 4;
+  white-space: pre;
+  overflow: auto;
+  border: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.code-stage-wrap .code-highlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: #e2e8f0;
+  background: transparent;
+  z-index: 1;
+  user-select: none;
+  overflow: hidden;
+}
+
+.code-stage-wrap .code-textarea {
+  position: relative;
+  z-index: 2;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background: transparent;
+  caret-color: #ffffff;
+}
+
+.code-stage-wrap .code-textarea::selection {
+  background: rgba(56, 189, 248, 0.28);
+  -webkit-text-fill-color: transparent;
+}
+
+/* Syntax Token Colors */
+.hl-kw   { color: #c084fc; font-weight: 600; }
+.hl-type { color: #38bdf8; font-weight: 600; }
+.hl-bool { color: #fb923c; font-weight: 600; }
+.hl-str  { color: #4ade80; }
+.hl-num  { color: #facc15; }
+.hl-op   { color: #f472b6; font-weight: 600; }
+.hl-com  { color: #64748b; font-style: italic; }
+
+.hl-err-line {
+  display: inline-block;
+  min-width: 100%;
+  background: rgba(239, 68, 68, 0.16);
+  text-decoration: wavy underline rgba(239, 68, 68, 0.85);
+  text-underline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* 3. Gutter Line & Inline Error Markers */
+.code-gutter {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 14px 6px 14px 8px;
+  min-width: 46px;
+}
+
+.gutter-line {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  line-height: 1.65;
+  padding: 0 4px;
+  border-radius: 4px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.gutter-line.is-error {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.25);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gutter-line.is-error::before {
+  content: "●";
+  color: #ef4444;
+  font-size: 8px;
+  line-height: 1;
+}
+
+.gutter-line.is-error:hover {
+  background: rgba(239, 68, 68, 0.38);
+}
+
+/* 4. Desktop Resizable Split Between Editor and Inspector */
+@media (min-width: 961px) {
+  .studio-grid {
+    grid-template-columns: var(--editor-col, 1fr) 10px var(--inspector-col, 1fr);
+    gap: 6px;
+  }
+
+  .studio-resizer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: col-resize;
+    user-select: none;
+    border-radius: 6px;
+    transition: background-color 0.15s ease;
+  }
+
+  .studio-resizer:hover,
+  .studio-resizer.is-dragging {
+    background: var(--bg-muted);
+  }
+
+  .resizer-handle {
+    width: 3px;
+    height: 36px;
+    border-radius: 999px;
+    background: var(--line-strong);
+    transition: background-color 0.15s ease, height 0.15s ease;
+  }
+
+  .studio-resizer:hover .resizer-handle,
+  .studio-resizer.is-dragging .resizer-handle {
+    background: var(--ink);
+    height: 52px;
+  }
+}
+
+@media (max-width: 960px) {
+  .studio-resizer {
+    display: none !important;
+  }
+}
+
+/* 5. Mobile Workbench Tabs & Floating Action Run Button */
+.mobile-workbench-tabs {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .mobile-workbench-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    padding: 4px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  .mob-wb-tab {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    color: var(--ink-secondary);
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 7px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .mob-wb-tab.is-active {
+    background: var(--ink);
+    color: var(--ink-inverse);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  .mob-fab-run {
+    padding: 7px 12px;
+    font-size: 12.5px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+
+  #studio-grid[data-mobile-pane="inspector"] #editor-pane {
+    display: none;
+  }
+
+  #studio-grid[data-mobile-pane="editor"] #inspector-pane {
+    display: none;
+  }
+
+  .code-stage-wrap .code-highlight,
+  .code-stage-wrap .code-textarea {
+    font-size: 12.5px;
+    padding: 10px 12px;
+  }
+}
+
+/* 6. Grammar Drawer Live Conflict Highlighting & Status Badge */
+.grammar-status-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink-secondary);
+}
+
+.grammar-status-badge.is-warn {
+  background: var(--warn-bg);
+  color: var(--warn);
+  border-color: var(--warn-border);
+}
+
+.grammar-status-badge.is-bad {
+  background: var(--bad-bg);
+  color: var(--bad);
+  border-color: var(--bad-border);
+}
+
+.grammar-status-badge.is-ok {
+  background: var(--ok-bg);
+  color: var(--ok);
+  border-color: var(--ok-border);
+}
+
+.grammar-card.is-conflict {
+  border-color: var(--bad);
+  background: var(--bad-bg);
+}
+
+.grammar-card-input.is-conflict {
+  border-color: var(--bad) !important;
+  background: #ffffff !important;
+  color: var(--bad) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.14);
+}
+
+/* 7. Subtle Animations (Stage Ripple, Line Reveal, Error Shake, Spring Drawer) */
+.drawer-sheet {
+  transition: transform 0.34s cubic-bezier(0.22, 1.12, 0.36, 1);
+}
+
+.drawer-sheet.is-open .grammar-card {
+  animation: cardFadeIn 0.24s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--card-i, 0) * 16ms);
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stage.stage-pulse {
+  animation: stageRipple 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes stageRipple {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.045); box-shadow: 0 0 0 3px var(--ok-border); }
+  100% { transform: scale(1); }
+}
+
+.console-line-reveal {
+  display: inline-block;
+  animation: consoleTypeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--line-i, 0) * 35ms);
+}
+
+@keyframes consoleTypeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.line-shake {
+  animation: errorShake 0.36s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes errorShake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+
+/* 8. Keyboard Shortcuts Help Dialog */
+dialog.dlg-shortcuts {
+  width: min(520px, 92vw);
+  max-width: 520px;
+  border-radius: 16px;
+  padding: 20px 24px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
+}
+
+.shortcuts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.shortcut-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+}
+
+/* 9. Full Studio Dark Mode Theme (html[data-theme="dark"]) */
+html[data-theme="dark"] {
+  --bg: #111318;
+  --bg-canvas: #0b0d11;
+  --bg-subtle: #181b22;
+  --bg-muted: #222631;
+  --ink: #f4f4f5;
+  --ink-secondary: #a1a1aa;
+  --ink-muted: #71717a;
+  --ink-faint: #52525b;
+  --ink-inverse: #09090b;
+  --line: #272b37;
+  --line-subtle: #1e222d;
+  --line-strong: #3f4556;
+  --ok: #34d399;
+  --ok-bg: rgba(16, 185, 129, 0.14);
+  --ok-border: rgba(52, 211, 153, 0.35);
+  --bad: #f87171;
+  --bad-bg: rgba(239, 68, 68, 0.14);
+  --bad-border: rgba(248, 113, 113, 0.35);
+  --warn: #fbbf24;
+  --warn-bg: rgba(245, 158, 11, 0.14);
+  --warn-border: rgba(251, 191, 36, 0.35);
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] .topbar {
+  background: rgba(17, 19, 24, 0.88);
+  border-bottom-color: var(--line);
+}
+
+html[data-theme="dark"] .studio-pane,
+html[data-theme="dark"] .pane-header,
+html[data-theme="dark"] .pane-footer,
+html[data-theme="dark"] .inspector-header-flattened,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .card-header,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .feed-item,
+html[data-theme="dark"] .drawer-sheet,
+html[data-theme="dark"] .drawer-header,
+html[data-theme="dark"] .drawer-footer,
+html[data-theme="dark"] .grammar-card,
+html[data-theme="dark"] .custom-select-menu,
+html[data-theme="dark"] .profile-dropdown {
+  background: var(--bg);
+  border-color: var(--line);
+}
+
+html[data-theme="dark"] .subtab-btn.is-active,
+html[data-theme="dark"] .seg .tab.is-active,
+html[data-theme="dark"] .grammar-card-input:hover,
+html[data-theme="dark"] .grammar-card-input:focus {
+  background: var(--bg-subtle);
+  color: var(--ink);
+}
+
 
 
 

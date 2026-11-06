@@ -1,7 +1,7 @@
 """Engine 1 - Lexical analysis.   input: source text   output: tokens + lexical errors."""
 import re
 
-from .grammar import DELIMITERS
+from .grammar import DELIMITERS, normalize
 
 CATEGORY = {
     "ID": "Identifier", "NUM": "Integer Constant", "DEC": "Float Constant", "STR": "String Constant",
@@ -10,20 +10,42 @@ CATEGORY = {
     "MUL": "Multiplication Operator", "DIV": "Division Operator", "GT": "Greater Than Operator",
     "LT": "Less Than Operator", "EQ": "Equal Comparison Operator", "NE": "Not Equal Comparison Operator",
     "AND": "Logical AND Operator", "OR": "Logical OR Operator", "NOT": "Logical NOT Operator",
+    "CAST": "Type Cast Operator",
     "LPAREN": "Left Parenthesis", "RPAREN": "Right Parenthesis", "LBRACE": "Left Brace",
     "RBRACE": "Right Brace", "SEMI": "Semicolon"}
 
 
 def _build(grammar):
     """Compiles the grammar into one regex. Longest operators go first (so '&&~' is not '&&' + '~')."""
-    ops = sorted(grammar["operators"].values(), key=len, reverse=True)
-    parts = [("BLOCK", r"#~[\s\S]*?~#"), ("OPENBLOCK", r"#~"), ("COMMENT", r"//[^\n]*"), ("DEC", r"\d+\.\d+"), ("NUM", r"\d+"), ("STR", r'"[^"\n]*"'), ("CHR", r"'[^'\n]'"),
-             ("ID", r"[A-Za-z_]\w*"), ("OP", "|".join(re.escape(o) for o in ops) + r"|[(){};]"),
-             ("NL", r"\n"), ("SKIP", r"[ \t\r]+"), ("BAD", r".")]
+    ops = sorted([o for o in grammar["operators"].values() if o], key=len, reverse=True)
+    op_parts = []
+    for o in ops:
+        esc = re.escape(o)
+        # If an operator starts with a word character (like 'as~'), require a leading word boundary
+        if re.match(r"^[A-Za-z_]", o):
+            esc = r"\b" + esc
+        if re.match(r".*[A-Za-z0-9_]$", o):
+            esc = esc + r"\b"
+        op_parts.append(esc)
+    parts = [
+        ("BLOCK", r"/~~[\s\S]*?~~/|#~[\s\S]*?~#"),
+        ("OPENBLOCK", r"/~~|#~"),
+        ("COMMENT", r"//[^\n]*"),
+        ("DEC", r"\d+\.\d+"),
+        ("NUM", r"\d+"),
+        ("STR", r'"[^"\n]*"'),
+        ("CHR", r"'[^'\n]'"),
+        ("OP", "|".join(op_parts) + r"|[(){};]"),
+        ("ID", r"[A-Za-z_]\w*"),
+        ("NL", r"\n"),
+        ("SKIP", r"[ \t\r]+"),
+        ("BAD", r"."),
+    ]
     return re.compile("|".join(f"(?P<{n}>{rx})" for n, rx in parts))
 
 
 def run(source: str, grammar: dict) -> dict:
+    grammar = normalize(grammar)
     word_role = {w: r for r, w in grammar["keywords"].items()}
     op_role = {w: r for r, w in grammar["operators"].items()}
     tokens, errors, line, line_start = [], [], 1, 0
@@ -36,7 +58,8 @@ def run(source: str, grammar: dict) -> dict:
             if breaks:
                 line, line_start = line + breaks, m.start() + text.rfind("\n") + 1
         elif kind == "OPENBLOCK":
-            errors.append({"line": line, "col": col, "message": "unterminated block comment (missing '~#')"})
+            closer = "~~/" if text == "/~~" else "~#"
+            errors.append({"line": line, "col": col, "message": f"unterminated block comment (missing '{closer}')"})
             break
         elif kind in ("SKIP", "COMMENT"):
             continue

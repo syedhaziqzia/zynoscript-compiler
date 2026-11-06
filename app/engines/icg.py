@@ -22,6 +22,10 @@ class Generator:
             return e["value"]
         if k == "var":
             return e["name"]
+        if k == "cast":
+            a, t = self.expr(e["expr"]), self.temp()
+            self.emit(e["sym"], a, e["target"], t)
+            return t
         if k == "un":
             a, t = self.expr(e["operand"]), self.temp()
             self.emit(e["sym"], a, "", t)

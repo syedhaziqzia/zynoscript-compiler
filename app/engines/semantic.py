@@ -1,13 +1,21 @@
 """Engine 3 - Semantic analysis.   input: AST   output: symbol table + semantic errors."""
-from .grammar import type_label
+from .grammar import normalize, type_label
 
 NUMERIC = ("int", "float")
 ARITH, COMPARE, LOGIC = ("ADD", "SUB", "MUL", "DIV"), ("GT", "LT"), ("AND", "OR")
+ALLOWED_CASTS = {
+    ("int", "int"), ("float", "float"), ("string", "string"), ("bool", "bool"), ("char", "char"),
+    ("int", "float"), ("float", "int"),
+    ("int", "string"), ("float", "string"), ("bool", "string"), ("char", "string"),
+    ("string", "int"), ("string", "float"),
+    ("bool", "int"), ("int", "bool"),
+    ("char", "int"), ("int", "char"),
+}
 
 
 class Analyzer:
     def __init__(self, grammar):
-        self.g, self.symbols, self.errors = grammar, {}, []
+        self.g, self.symbols, self.errors = normalize(grammar), {}, []
 
     def label(self, t):
         return type_label(self.g, t)
@@ -58,6 +66,15 @@ class Analyzer:
                 self.error(e["line"], 2, f"variable '{e['name']}' is not declared")
                 return None
             return self.symbols[e["name"]]["type"]
+        if k == "cast":
+            src_t = self.type_of(e["expr"])
+            target_t = e["target"]
+            if src_t is None:
+                return target_t
+            if (src_t, target_t) not in ALLOWED_CASTS:
+                self.error(e["line"], 8, f"cannot cast {self.label(src_t)} to {self.label(target_t)} using '{e['sym']}'")
+                return None
+            return target_t
         if k == "un":
             t = self.type_of(e["operand"])
             if t is not None and t != "bool":

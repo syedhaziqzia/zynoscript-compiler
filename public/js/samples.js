@@ -1,4 +1,4 @@
-/* Example ZynoScript programs for the "Example" menu. */
+/* Example ZynoScript programs for the "Preset" menu. */
 const SAMPLES = {
   "Lab handout example": `// Lab handout: compare two numbers
 let x := 5;      // type inferred as whole
@@ -9,9 +9,9 @@ elseWay
     beam "y is smaller or equal";
 halt;
 `,
-  "Working program": `#~ Working program
-   Shows every data type, arithmetic,
-   an if/else and a loop. ~#
+  "Working program": `/~~ Working program
+    Shows every data type, arithmetic,
+    an if/else and a loop. ~~/
 let whole a := 5;
 let whole b := 10;
 let whole sum;              // declared now, assigned below
@@ -33,12 +33,29 @@ beam sum;
 beam msg;
 halt;
 `,
-  "Comments guide": `// Single-line comment: everything after // is ignored
-#~ Block comment:
-   can span as many lines as you like
-   and ends with a tilde-hash ~#
+  "Type casting (as~)": `/~~ Explicit Type Casting with as~
+    Converts between whole, part, phrase, flag, and mark. ~~/
+let part price := 19.75;
+let whole rounded := price as~ whole;      // 19.75 -> 19
+let phrase priceTag := rounded as~ phrase; // 19 -> "19"
+let whole parsed := "42" as~ whole;        // "42" -> 42
+let mark letter := 65 as~ mark;            // ASCII 65 -> 'A'
+let whole code := letter as~ whole;        // 'A' -> 65
+let flag active := 1 as~ flag;             // 1 -> true
+
+beam "Rounded price: " +~ priceTag;
+beam parsed +~ 8;
+beam letter;
+beam code;
+beam active;
+halt;
+`,
+  "Comments guide": `// Single-line comment: everything after // until end of line is ignored
+/~~ Multi-line block comment:
+    begins with slash-tilde-tilde (/~~)
+    and closes with tilde-tilde-slash (~~/) ~~/
 let whole score := 90;   // trailing comment after code
-let flag passed := score =>> 50 #~ inline block ~# ;
+let flag passed := score =>> 50 /~~ inline block comment ~~/ ;
 whenTrue passed
     beam "Passed!";      // comments never change the output
 halt;
@@ -129,8 +146,8 @@ beam "Maximum value:";
 beam maxVal;
 halt;
 `,
-  "Temperature converter": `#~ Celsius to Fahrenheit
-   F = C * 9 / 5 + 32 ~#
+  "Temperature converter": `/~~ Celsius to Fahrenheit
+    F = C * 9 / 5 + 32 ~~/
 let part celsius := 25.0;
 let part fahrenheit := (celsius *~ 9.0 /~ 5.0) +~ 32.0;
 beam "Celsius:";

@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import CORS_ORIGINS, PUBLIC_DIR, ROOT
-from .db import init_db
+from .db import ensure_db, get_active_db_type, init_db
 from .routes import admin, auth, compiler, grammar, logs
 
 
@@ -79,6 +79,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/api/health", tags=["system"])
+def health_check():
+    ensure_db()
+    return {"ok": True, "db": get_active_db_type()}
+
 
 for module in (auth, grammar, compiler, logs, admin):
     app.include_router(module.router)

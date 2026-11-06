@@ -1,7 +1,7 @@
 """Engine 5 - Output (interpreter).   input: AST + grammar   output: printed lines, final variables, runtime errors.
 
 Runs the program statement by statement. A step limit stops endless loops so the server cannot hang."""
-from .grammar import lexeme
+from .grammar import lexeme, normalize, type_label
 
 MAX_STEPS = 10000
 DEFAULTS = {"int": 0, "float": 0.0, "string": "", "bool": False, "char": ""}
@@ -15,8 +15,9 @@ class RuntimeFault(Exception):
 
 class Interpreter:
     def __init__(self, grammar):
-        self.true_word = lexeme(grammar, "TRUE")
-        self.false_word = lexeme(grammar, "FALSE")
+        self.g = normalize(grammar)
+        self.true_word = lexeme(self.g, "TRUE")
+        self.false_word = lexeme(self.g, "FALSE")
         self.env, self.types, self.out, self.steps = {}, {}, [], 0
 
     def tick(self, line):
@@ -41,6 +42,49 @@ class Interpreter:
             return raw[1:-1]
         return raw
 
+    def eval_cast(self, val, target, line):
+        if target == "string":
+            return self.show(val)
+        if target == "float":
+            if isinstance(val, bool):
+                return 1.0 if val else 0.0
+            if isinstance(val, (int, float)):
+                return float(val)
+            if isinstance(val, str):
+                try:
+                    return float(val.strip())
+                except ValueError:
+                    raise RuntimeFault(line, f"cannot convert {type_label(self.g, 'string')} '{val}' to {type_label(self.g, 'float')}")
+        if target == "int":
+            if isinstance(val, bool):
+                return 1 if val else 0
+            if isinstance(val, int):
+                return val
+            if isinstance(val, float):
+                return int(val)
+            if isinstance(val, str):
+                # Single-character mark -> ASCII/Unicode code point if not a digit string
+                s = val.strip()
+                try:
+                    return int(s)
+                except ValueError:
+                    if len(val) == 1:
+                        return ord(val)
+                    raise RuntimeFault(line, f"cannot convert {type_label(self.g, 'string')} '{val}' to {type_label(self.g, 'int')}")
+        if target == "bool":
+            if isinstance(val, bool):
+                return val
+            if isinstance(val, (int, float)):
+                return val != 0
+        if target == "char":
+            if isinstance(val, int) and not isinstance(val, bool):
+                if 0 <= val <= 0x10FFFF:
+                    return chr(val)
+                raise RuntimeFault(line, f"character code {val} is out of range")
+            if isinstance(val, str) and len(val) == 1:
+                return val
+        raise RuntimeFault(line, f"cannot cast value '{self.show(val)}' to {type_label(self.g, target)}")
+
     def eval(self, n):
         k, line = n["node"], n["line"]
         if k == "lit":
@@ -49,6 +93,17 @@ class Interpreter:
             if n["name"] not in self.env:
                 raise RuntimeFault(line, f"'{n['name']}' has no value yet")
             return self.env[n["name"]]
+        if k == "cast":
+            val = self.eval(n["expr"])
+            # Distinguish char variable/literal from multi-char string when casting to int
+            expr_node = n["expr"]
+            is_char_src = (
+                (expr_node["node"] == "lit" and expr_node.get("type") == "char")
+                or (expr_node["node"] == "var" and self.types.get(expr_node.get("name")) == "char")
+            )
+            if is_char_src and n["target"] == "int" and isinstance(val, str) and len(val) == 1:
+                return ord(val)
+            return self.eval_cast(val, n["target"], line)
         if k == "un":
             return not self.eval(n["operand"])
         a, b, op = self.eval(n["left"]), self.eval(n["right"]), n["op"]
@@ -89,7 +144,7 @@ class Interpreter:
         if k == "decl":
             value = self.eval(s["init"]) if s["init"] else DEFAULTS.get(s["type"], 0)
             self.types[s["name"]] = s["type"]
-            self.env[s["name"]] = float(value) if s["type"] == "float" and isinstance(value, int) else value
+            self.env[s["name"]] = float(value) if s["type"] == "float" and isinstance(value, int) and not isinstance(value, bool) else value
         elif k == "assign":
             value = self.eval(s["value"])
             if self.types.get(s["name"]) == "float" and isinstance(value, int) and not isinstance(value, bool):

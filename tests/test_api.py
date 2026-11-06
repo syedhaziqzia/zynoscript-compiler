@@ -264,6 +264,15 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(blocked.status_code, 429)
         ratelimit.reset()
 
+    def test_health_endpoint_and_source_size_cap(self):
+        h = self.client.get("/api/health")
+        self.assertEqual(h.status_code, 200)
+        self.assertTrue(h.json().get("ok"))
+
+        huge_src = "let whole a := 1;\n" * 800  # > 10,000 chars
+        r = self.client.post("/api/compile/lexical", json={"source": huge_src}, headers=self.ali)
+        self.assertEqual(r.status_code, 413)
+
     def test_public_registration_always_assigns_user_role(self):
         from contextlib import contextmanager
         import sqlite3

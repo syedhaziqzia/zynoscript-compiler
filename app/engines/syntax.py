@@ -1,5 +1,5 @@
 """Engine 2 - Syntax analysis (recursive descent).   input: token list   output: AST + syntax error."""
-from .grammar import DELIMITERS, TYPE_OF_ROLE, lexeme
+from .grammar import DELIMITERS, TYPE_OF_ROLE, lexeme, normalize, type_label
 
 REL_ROLES = ("GT", "LT", "EQ", "NE")
 LITERALS = {"NUM": "int", "DEC": "float", "STR": "string", "CHR": "char", "TRUE": "bool", "FALSE": "bool"}
@@ -15,7 +15,7 @@ class Parser:
     """One method per non-terminal. Nodes are plain dicts so the tree can be sent to the browser as JSON."""
 
     def __init__(self, tokens, grammar):
-        self.t, self.i, self.g = tokens, 0, grammar
+        self.t, self.i, self.g = tokens, 0, normalize(grammar)
         last = tokens[-1] if tokens else {"line": 1, "col": 1, "lexeme": ""}
         self.eof = {"kind": "EOF", "lexeme": "end of file", "line": last["line"], "col": last["col"] + len(last["lexeme"])}
 
@@ -114,12 +114,26 @@ class Parser:
         return self.binary(lambda: self.binary(self.rel, ("AND",)), ("OR",))
 
     def rel(self):
-        left = self.binary(lambda: self.binary(self.factor, ("MUL", "DIV")), ("ADD", "SUB"))
+        left = self.binary(lambda: self.binary(self.cast_expr, ("MUL", "DIV")), ("ADD", "SUB"))
         if self.cur["kind"] in REL_ROLES:
             op = self.cur
             self.i += 1
-            right = self.binary(lambda: self.binary(self.factor, ("MUL", "DIV")), ("ADD", "SUB"))
+            right = self.binary(lambda: self.binary(self.cast_expr, ("MUL", "DIV")), ("ADD", "SUB"))
             left = {"node": "bin", "op": op["kind"], "sym": op["lexeme"], "left": left, "right": right, "line": op["line"]}
+        return left
+
+    def cast_expr(self):
+        left = self.factor()
+        while self.cur["kind"] == "CAST":
+            op = self.cur
+            self.i += 1
+            ttok = self.cur
+            if ttok["kind"] not in TYPE_OF_ROLE:
+                kinds = ", ".join(lexeme(self.g, r) for r in TYPE_OF_ROLE)
+                raise ParseError(ttok, f"expected a target type ({kinds}) after '{op['lexeme']}' but found '{ttok['lexeme']}'")
+            self.i += 1
+            target_type = TYPE_OF_ROLE[ttok["kind"]]
+            left = {"node": "cast", "target": target_type, "target_lexeme": ttok["lexeme"], "sym": op["lexeme"], "expr": left, "line": op["line"]}
         return left
 
     def factor(self):
@@ -160,6 +174,8 @@ def tree_text(nodes, depth=0):
             out.append(f"{pad}  {'Then' if k == 'if' else 'Body'}"); out += tree_text(n["then"] if k == "if" else n["body"], depth + 2)
             if k == "if" and n["else"] is not None:
                 out.append(f"{pad}  Else"); out += tree_text(n["else"], depth + 2)
+        elif k == "cast":
+            out.append(f"{pad}TypeCast: {n['sym']} {n['target']}"); out += tree_text(n["expr"], depth + 1)
         elif k == "bin":
             out.append(f"{pad}Operator: {n['sym']}"); out += tree_text([n["left"], n["right"]], depth + 1)
         elif k == "un":

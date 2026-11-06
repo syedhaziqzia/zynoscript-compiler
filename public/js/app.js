@@ -27,7 +27,7 @@ const GRAMMAR_GROUPS = {
   operators: [
     { title: "Assignment & Arithmetic", roles: ["ASSIGN", "ADD", "SUB", "MUL", "DIV"] },
     { title: "Relational Comparisons", roles: ["GT", "LT", "EQ", "NE"] },
-    { title: "Logical Operators", roles: ["AND", "OR", "NOT"] },
+    { title: "Logical & Type Casting", roles: ["AND", "OR", "NOT", "CAST"] },
   ],
 };
 
@@ -43,7 +43,7 @@ const ZS_DEFAULT_GRAMMAR = {
   },
   operators: {
     ASSIGN: ":=", ADD: "+~", SUB: "-~", MUL: "*~", DIV: "/~",
-    GT: "=>>", LT: "<<=", EQ: "~=", NE: "~!", AND: "&&~", OR: "||~", NOT: "!~"
+    GT: "=>>", LT: "<<=", EQ: "~=", NE: "~!", AND: "&&~", OR: "||~", NOT: "!~", CAST: "as~"
   }
 };
 const ZS_CATEGORY = {
@@ -53,6 +53,7 @@ const ZS_CATEGORY = {
   MUL: "Multiplication Operator", DIV: "Division Operator", GT: "Greater Than Operator",
   LT: "Less Than Operator", EQ: "Equal Comparison Operator", NE: "Not Equal Comparison Operator",
   AND: "Logical AND Operator", OR: "Logical OR Operator", NOT: "Logical NOT Operator",
+  CAST: "Type Cast Operator",
   LPAREN: "Left Parenthesis", RPAREN: "Right Parenthesis", LBRACE: "Left Brace",
   RBRACE: "Right Brace", SEMI: "Semicolon"
 };
@@ -62,10 +63,27 @@ const ZS_NUMERIC = ["int", "float"];
 const ZS_ARITH = ["ADD", "SUB", "MUL", "DIV"];
 const ZS_COMPARE = ["GT", "LT"];
 const ZS_LOGIC = ["AND", "OR"];
+const ZS_ALLOWED_CASTS = new Set([
+  "int->int", "float->float", "string->string", "bool->bool", "char->char",
+  "int->float", "float->int",
+  "int->string", "float->string", "bool->string", "char->string",
+  "string->int", "string->float",
+  "bool->int", "int->bool",
+  "char->int", "int->char"
+]);
+
+function zsNormalizeGrammar(g) {
+  const base = JSON.parse(JSON.stringify(ZS_DEFAULT_GRAMMAR));
+  if (!g || typeof g !== "object") return base;
+  if (g.keywords && typeof g.keywords === "object") Object.assign(base.keywords, g.keywords);
+  if (g.operators && typeof g.operators === "object") Object.assign(base.operators, g.operators);
+  return base;
+}
 
 function zsLexeme(g, role) {
   if (g.keywords && role in g.keywords) return g.keywords[role];
   if (g.operators && role in g.operators) return g.operators[role];
+  if (role in ZS_DEFAULT_GRAMMAR.operators) return ZS_DEFAULT_GRAMMAR.operators[role];
   for (const [ch, r] of Object.entries(ZS_DELIMITERS)) {
     if (r === role) return ch;
   }
@@ -83,16 +101,23 @@ function zsEscRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function zsRunLexical(source, grammar) {
+function zsRunLexical(source, rawGrammar) {
+  const grammar = zsNormalizeGrammar(rawGrammar);
   const wordRole = {};
   for (const [r, w] of Object.entries(grammar.keywords)) wordRole[w] = r;
   const opRole = {};
   for (const [r, w] of Object.entries(grammar.operators)) opRole[w] = r;
 
   const ops = Object.values(grammar.operators).filter((o) => typeof o === "string" && o.length > 0).sort((a, b) => b.length - a.length);
-  const opPattern = ops.map(zsEscRegex).join("|") + "|[(){};]";
+  const opParts = ops.map((o) => {
+    let esc = zsEscRegex(o);
+    if (/^[A-Za-z_]/.test(o)) esc = "\\b" + esc;
+    if (/[A-Za-z0-9_]$/.test(o)) esc = esc + "\\b";
+    return esc;
+  });
+  const opPattern = opParts.join("|") + "|[(){};]";
   const masterRx = new RegExp(
-    `(?<BLOCK>#~[\\s\\S]*?~#)|(?<OPENBLOCK>#~)|(?<COMMENT>\\/\\/[^\\n]*)|(?<DEC>\\d+\\.\\d+)|(?<NUM>\\d+)|(?<STR>"[^"\\n]*")|(?<CHR>'[^'\\n]')|(?<ID>[A-Za-z_]\\w*)|(?<OP>${opPattern})|(?<NL>\\n)|(?<SKIP>[ \\t\\r]+)|(?<BAD>.)`,
+    `(?<BLOCK>\\/~~[\\s\\S]*?~~\\/|#~[\\s\\S]*?~#)|(?<OPENBLOCK>\\/~~|#~)|(?<COMMENT>\\/\\/[^\\n]*)|(?<DEC>\\d+\\.\\d+)|(?<NUM>\\d+)|(?<STR>"[^"\\n]*")|(?<CHR>'[^'\\n]')|(?<OP>${opPattern})|(?<ID>[A-Za-z_]\\w*)|(?<NL>\\n)|(?<SKIP>[ \\t\\r]+)|(?<BAD>.)`,
     "g"
   );
 
@@ -102,11 +127,11 @@ function zsRunLexical(source, grammar) {
   while ((m = masterRx.exec(source)) !== null) {
     const groups = m.groups;
     let kind = null;
-    for (const k of ["BLOCK", "OPENBLOCK", "COMMENT", "DEC", "NUM", "STR", "CHR", "ID", "OP", "NL", "SKIP", "BAD"]) {
+    for (const k of ["BLOCK", "OPENBLOCK", "COMMENT", "DEC", "NUM", "STR", "CHR", "OP", "ID", "NL", "SKIP", "BAD"]) {
       if (groups[k] !== undefined) { kind = k; break; }
     }
     const text = m[0];
-    if (text.length === 0) { masterRx.lastIndex += 1; continue; } // safety: never loop on an empty match
+    if (text.length === 0) { masterRx.lastIndex += 1; continue; }
     const col = m.index - lineStart + 1;
     if (kind === "NL") {
       line += 1;
@@ -118,7 +143,8 @@ function zsRunLexical(source, grammar) {
         lineStart = m.index + text.lastIndexOf("\n") + 1;
       }
     } else if (kind === "OPENBLOCK") {
-      errors.push({ line, col, message: "unterminated block comment (missing '~#')" });
+      const closer = text === "/~~" ? "~~/" : "~#";
+      errors.push({ line, col, message: `unterminated block comment (missing '${closer}')` });
       break;
     } else if (kind === "SKIP" || kind === "COMMENT") {
       continue;
@@ -199,6 +225,9 @@ function zsTreeText(nodes, depth = 0) {
         out.push(`${pad}  Else`);
         out.push(...zsTreeText(n.else, depth + 2));
       }
+    } else if (k === "cast") {
+      out.push(`${pad}TypeCast: ${n.sym} ${n.target}`);
+      out.push(...zsTreeText(n.expr, depth + 1));
     } else if (k === "bin") {
       out.push(`${pad}Operator: ${n.sym}`);
       out.push(...zsTreeText([n.left, n.right], depth + 1));
@@ -214,7 +243,8 @@ function zsTreeText(nodes, depth = 0) {
   return out;
 }
 
-function zsRunSyntax(tokens, grammar) {
+function zsRunSyntax(tokens, rawGrammar) {
+  const grammar = zsNormalizeGrammar(rawGrammar);
   let i = 0;
   const last = tokens.length ? tokens[tokens.length - 1] : { line: 1, col: 1, lexeme: "" };
   const eof = { kind: "EOF", lexeme: "end of file", line: last.line, col: last.col + last.lexeme.length };
@@ -329,12 +359,29 @@ function zsRunSyntax(tokens, grammar) {
   }
 
   function rel() {
-    let left = binary(() => binary(factor, ["MUL", "DIV"]), ["ADD", "SUB"]);
+    let left = binary(() => binary(castExpr, ["MUL", "DIV"]), ["ADD", "SUB"]);
     if (ZS_REL_ROLES.includes(cur().kind)) {
       const op = cur();
       i += 1;
-      const right = binary(() => binary(factor, ["MUL", "DIV"]), ["ADD", "SUB"]);
+      const right = binary(() => binary(castExpr, ["MUL", "DIV"]), ["ADD", "SUB"]);
       left = { node: "bin", op: op.kind, sym: op.lexeme, left, right, line: op.line };
+    }
+    return left;
+  }
+
+  function castExpr() {
+    let left = factor();
+    while (cur().kind === "CAST") {
+      const op = cur();
+      i += 1;
+      const ttok = cur();
+      if (!(ttok.kind in ZS_TYPE_OF_ROLE)) {
+        const kinds = Object.keys(ZS_TYPE_OF_ROLE).map(r => zsLexeme(grammar, r)).join(", ");
+        fail(ttok, `expected a target type (${kinds}) after '${op.lexeme}' but found '${ttok.lexeme}'`);
+      }
+      i += 1;
+      const target = ZS_TYPE_OF_ROLE[ttok.kind];
+      left = { node: "cast", target, target_lexeme: ttok.lexeme, sym: op.lexeme, expr: left, line: op.line };
     }
     return left;
   }
@@ -374,7 +421,8 @@ function zsRunSyntax(tokens, grammar) {
   }
 }
 
-function zsRunSemantic(ast, grammar) {
+function zsRunSemantic(ast, rawGrammar) {
+  const grammar = zsNormalizeGrammar(rawGrammar);
   const symbols = {}, errors = [];
   const label = (t) => zsTypeLabel(grammar, t);
   const error = (line, rule, message) => errors.push({ line, rule, message });
@@ -389,6 +437,16 @@ function zsRunSemantic(ast, grammar) {
         return null;
       }
       return symbols[e.name].type;
+    }
+    if (k === "cast") {
+      const srcT = typeOf(e.expr);
+      const targetT = e.target;
+      if (srcT === null) return targetT;
+      if (!ZS_ALLOWED_CASTS.has(`${srcT}->${targetT}`)) {
+        error(e.line, 8, `cannot cast ${label(srcT)} to ${label(targetT)} using '${e.sym}'`);
+        return null;
+      }
+      return targetT;
     }
     if (k === "un") {
       const t = typeOf(e.operand);
@@ -473,6 +531,11 @@ function zsRunIcg(ast) {
     const k = e.node;
     if (k === "lit") return e.value;
     if (k === "var") return e.name;
+    if (k === "cast") {
+      const a = expr(e.expr), t = temp();
+      emit(e.sym, a, e.target, t);
+      return t;
+    }
     if (k === "un") {
       const a = expr(e.operand), t = temp();
       emit(e.sym, a, "", t);
@@ -536,7 +599,8 @@ function zsRunIcg(ast) {
   return { stage: "icg", ok: true, tac, quads, errors: [] };
 }
 
-function zsRunOutput(ast, grammar) {
+function zsRunOutput(ast, rawGrammar) {
+  const grammar = zsNormalizeGrammar(rawGrammar);
   const MAX_STEPS = 10000;
   const trueWord = zsLexeme(grammar, "TRUE");
   const falseWord = zsLexeme(grammar, "FALSE");
@@ -579,12 +643,60 @@ function zsRunOutput(ast, grammar) {
     return raw;
   }
 
+  function evalCast(val, target, line, isCharSrc) {
+    if (target === "string") return show(val);
+    if (target === "float") {
+      if (typeof val === "boolean") return mkFloat(val ? 1.0 : 0.0);
+      if (isFloat(val)) return val;
+      if (typeof val === "number") return mkFloat(val);
+      if (typeof val === "string") {
+        const s = val.trim();
+        const num = Number(s);
+        if (s !== "" && !Number.isNaN(num)) return mkFloat(num);
+        fault(line, `cannot convert ${zsTypeLabel(grammar, "string")} '${val}' to ${zsTypeLabel(grammar, "float")}`);
+      }
+    }
+    if (target === "int") {
+      if (isCharSrc && typeof val === "string" && val.length === 1) return val.charCodeAt(0);
+      if (typeof val === "boolean") return val ? 1 : 0;
+      if (isFloat(val)) return Math.trunc(val.v);
+      if (typeof val === "number") return Math.trunc(val);
+      if (typeof val === "string") {
+        const s = val.trim();
+        if (/^[+-]?\d+$/.test(s)) return parseInt(s, 10);
+        if (val.length === 1) return val.charCodeAt(0);
+        fault(line, `cannot convert ${zsTypeLabel(grammar, "string")} '${val}' to ${zsTypeLabel(grammar, "int")}`);
+      }
+    }
+    if (target === "bool") {
+      if (typeof val === "boolean") return val;
+      if (isFloat(val)) return val.v !== 0;
+      if (typeof val === "number") return val !== 0;
+    }
+    if (target === "char") {
+      const nv = numVal(val);
+      if (typeof nv === "number" && Number.isInteger(nv) && typeof val !== "boolean") {
+        if (nv >= 0 && nv <= 0x10FFFF) return String.fromCodePoint(nv);
+        fault(line, `character code ${nv} is out of range`);
+      }
+      if (typeof val === "string" && val.length === 1) return val;
+    }
+    fault(line, `cannot cast value '${show(val)}' to ${zsTypeLabel(grammar, target)}`);
+  }
+
   function evalExpr(n) {
     const { node: k, line } = n;
     if (k === "lit") return literal(n);
     if (k === "var") {
       if (!(n.name in env)) fault(line, `'${n.name}' has no value yet`);
       return env[n.name];
+    }
+    if (k === "cast") {
+      const val = evalExpr(n.expr);
+      const exprNode = n.expr;
+      const isCharSrc = (exprNode.node === "lit" && exprNode.type === "char") ||
+                        (exprNode.node === "var" && types[exprNode.name] === "char");
+      return evalCast(val, n.target, line, isCharSrc);
     }
     if (k === "un") return !evalExpr(n.operand);
     const a = evalExpr(n.left), b = evalExpr(n.right), op = n.op;
@@ -658,7 +770,7 @@ function zsRunOutput(ast, grammar) {
 }
 
 function compileLocal(stage, source, grammar) {
-  const g = grammar || ZS_DEFAULT_GRAMMAR;
+  const g = zsNormalizeGrammar(grammar);
   const stages = ["lexical", "syntax", "semantic", "icg", "output"];
   const results = {};
   let blocked_by = null;
@@ -693,7 +805,7 @@ const ZS_DEFAULT_ROLE_MEANINGS = {
   operator_roles: {
     ASSIGN: "Assign value", ADD: "Addition", SUB: "Subtraction", MUL: "Multiplication",
     DIV: "Division", GT: "Greater than", LT: "Less than", EQ: "Equal to", NE: "Not equal to",
-    AND: "Logical AND", OR: "Logical OR", NOT: "Logical NOT"
+    AND: "Logical AND", OR: "Logical OR", NOT: "Logical NOT", CAST: "Type cast"
   }
 };
 
@@ -1032,6 +1144,7 @@ async function enterApp(user) {
   const topbar = $("#topbar");
   if (topbar) topbar.hidden = false;
   $("#nav").hidden = $("#whoami").hidden = $("#cmd-trigger").hidden = false;
+  if ($("#btn-shortcuts-help")) $("#btn-shortcuts-help").hidden = false;
   $("#nav-admin").hidden = $("#log-user").hidden = !isAdmin;
 
   // Immediately render workbench so refresh and login feel instantaneous
@@ -1056,6 +1169,7 @@ function leaveApp(message) {
   const topbar = $("#topbar");
   if (topbar) topbar.hidden = true;
   $("#nav").hidden = $("#whoami").hidden = $("#cmd-trigger").hidden = true;
+  if ($("#btn-shortcuts-help")) $("#btn-shortcuts-help").hidden = true;
   $("#nav-admin").hidden = $("#log-user").hidden = true;
   toggleProfileDropdown(false);
   closeGrammarDrawer();
@@ -1471,12 +1585,31 @@ $("#pw-toggle").addEventListener("click", (e) => {
     c.closePath();
   }
 
-  function render() {
-    if (authView.hidden) {
+  let lastFrameTs = 0;
+  const prefersReducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isLowEndDevice = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && animId) {
+      cancelAnimationFrame(animId);
+      animId = null;
+    } else if (!document.hidden && !authView.hidden) {
+      startLoop();
+    }
+  });
+
+  function render(nowTs = 0) {
+    if (authView.hidden || document.hidden || prefersReducedMotion) {
       if (animId) cancelAnimationFrame(animId);
       animId = null;
       return;
     }
+    const isMobileCanvas = width < 768 || ("ontouchstart" in window) || isLowEndDevice;
+    if (isMobileCanvas && nowTs - lastFrameTs < 33) {
+      animId = requestAnimationFrame(render);
+      return;
+    }
+    lastFrameTs = nowTs;
 
     const boxes = cachedBoxes || updateContentBoxes();
 
@@ -1941,7 +2074,7 @@ function renderGrammar() {
       </div>
       <pre class="code bnf-code-view">${esc(state.grammar.bnf)}</pre>
       <div class="grammar-rules-footer">
-        <p class="muted text-small">Every statement ends with a semicolon <code>;</code>. Programs terminate with <code>halt;</code>. Comments: <code>// line</code> and <code>#~ block ~#</code> are ignored by the compiler.</p>
+        <p class="muted text-small">Every statement ends with a semicolon <code>;</code>. Programs terminate with <code>halt;</code>. Comments: <code>// line</code> and <code>/~~ block ~~/</code> are ignored by the compiler.</p>
       </div>`;
     const btnCopy = $("#btn-copy-bnf");
     if (btnCopy) {
@@ -1956,12 +2089,14 @@ function renderGrammar() {
   const groups = GRAMMAR_GROUPS[tab] || [];
   const rolesMap = tab === "keywords" ? state.grammar.keyword_roles : state.grammar.operator_roles;
 
+  let cardIdx = 0;
   const groupsHtml = groups.map((grp) => {
     const cards = grp.roles.map((role) => {
       const meaning = rolesMap[role] || role;
       const val = state.draft[tab][role] ?? "";
+      const delayStyle = `style="--card-i:${cardIdx++}"`;
       return `
-        <div class="grammar-card">
+        <div class="grammar-card" ${delayStyle}>
           <div class="grammar-card-info">
             <span class="grammar-role-badge">${esc(role)}</span>
             <label class="grammar-card-label" for="g-${role}" title="${esc(meaning)}">${esc(meaning)}</label>
@@ -1978,10 +2113,44 @@ function renderGrammar() {
   }).join("");
 
   body.innerHTML = `${groupsHtml}<div id="grammar-problems"></div>`;
+
+  function validateGrammarDraftLive() {
+    const inputs = $$("input[data-role]", body);
+    const counts = {};
+    const otherTab = tab === "keywords" ? "operators" : "keywords";
+    const otherVals = new Set(Object.values(state.draft[otherTab] || {}).map((v) => String(v || "").trim()).filter(Boolean));
+    inputs.forEach((inp) => {
+      const v = inp.value.trim();
+      if (v) counts[v] = (counts[v] || 0) + 1;
+    });
+    let hasConflict = false;
+    inputs.forEach((inp) => {
+      const v = inp.value.trim();
+      const role = inp.dataset.role;
+      const isCommentClash = tab === "operators" && (v.includes("//") || v.includes("/~~") || v.includes("~~/") || v.includes("#~") || v.includes("~#"));
+      const isInvalid = !v || counts[v] > 1 || otherVals.has(v) || isCommentClash ||
+        (tab === "keywords" && !/^[A-Za-z_][A-Za-z0-9_]*$/.test(v)) ||
+        (tab === "operators" && role !== "CAST" && !/^[^\sA-Za-z0-9_\"'(){};.]{1,4}$/.test(v));
+      inp.classList.toggle("is-conflict", isInvalid);
+      const card = inp.closest(".grammar-card");
+      if (card) card.classList.toggle("is-conflict", isInvalid);
+      if (isInvalid) hasConflict = true;
+    });
+    return hasConflict;
+  }
+
+  validateGrammarDraftLive();
+  if ($("#grammar-preview")) $("#grammar-preview").hidden = tab === "rules";
+
   $$("input[data-role]", body).forEach((i) => i.addEventListener("input", () => {
     state.draft[tab][i.dataset.role] = i.value.trim();
     state.grammarDraftDirty = true;
-    $("#grammar-msg").textContent = "Unsaved changes";
+    const conflict = validateGrammarDraftLive();
+    const msgEl = $("#grammar-msg");
+    if (msgEl) {
+      msgEl.textContent = conflict ? "Conflict or invalid token detected" : "Unsaved – runs use saved grammar";
+      msgEl.className = "grammar-status-badge " + (conflict ? "is-bad" : "is-warn");
+    }
   }));
 }
 
@@ -1990,6 +2159,32 @@ $$("[data-gtab]").forEach((t) => t.addEventListener("click", () => {
   renderGrammar();
 }));
 
+if ($("#grammar-preview")) {
+  $("#grammar-preview").addEventListener("click", () => {
+    const baseSrc = SAMPLES[sample.value] || code.value;
+    const defKw = ZS_DEFAULT_GRAMMAR.keywords;
+    const defOp = ZS_DEFAULT_GRAMMAR.operators;
+    const draftKw = (state.draft && state.draft.keywords) || defKw;
+    const draftOp = (state.draft && state.draft.operators) || defOp;
+    let previewSrc = baseSrc;
+    for (const [role, defWord] of Object.entries(defKw)) {
+      const customWord = draftKw[role] || defWord;
+      if (customWord !== defWord) {
+        previewSrc = previewSrc.replace(new RegExp("\\b" + zsEscRegex(defWord) + "\\b", "g"), customWord);
+      }
+    }
+    for (const [role, defSym] of Object.entries(defOp)) {
+      const customSym = draftOp[role] || defSym;
+      if (customSym !== defSym) {
+        previewSrc = previewSrc.split(defSym).join(customSym);
+      }
+    }
+    code.value = previewSrc;
+    updateGutter();
+    toast("Translated sample with draft grammar tokens");
+  });
+}
+
 $("#grammar-save").addEventListener("click", async () => {
   try {
     setGrammar(await Api.put("/api/grammar", {
@@ -1997,9 +2192,11 @@ $("#grammar-save").addEventListener("click", async () => {
       operators: state.draft.operators
     }));
     state.grammarDraftDirty = false;
-    $("#grammar-msg").textContent = "Saved. Engines now use updated grammar.";
+    $("#grammar-msg").textContent = "Saved · Active";
+    $("#grammar-msg").className = "grammar-status-badge is-ok";
     toast("Grammar updated successfully");
     compileCache.clear();
+    updateSyntaxHighlight();
   } catch (err) {
     const list = (err.problems || [err.message]).map((p) => `<li>${esc(p)}</li>`).join("");
     $("#grammar-problems").innerHTML = `<ul class="problems">${list}</ul>`;
@@ -2010,8 +2207,10 @@ $("#grammar-reset").addEventListener("click", async () => {
   try {
     setGrammar(await Api.post("/api/grammar/reset"));
     state.grammarDraftDirty = false;
-    $("#grammar-msg").textContent = "Reset to default ZynoScript grammar.";
+    $("#grammar-msg").textContent = "Default grammar active";
+    $("#grammar-msg").className = "grammar-status-badge";
     compileCache.clear();
+    updateSyntaxHighlight();
     toast("Grammar reset to default");
   } catch (err) {
     if (err.status === 401) return leaveApp(err.message);
@@ -2019,16 +2218,136 @@ $("#grammar-reset").addEventListener("click", async () => {
   }
 });
 
-/* ---------- Code Editor ---------- */
-const code = $("#code"), gutter = $("#gutter");
-function updateGutter() {
-  const n = code.value.split("\n").length;
-  gutter.textContent = Array.from({ length: n }, (_, i) => i + 1).join("\n");
-  $("#code-stats").textContent = `${n} line${n > 1 ? "s" : ""} · ${code.value.length} chars`;
+/* ---------- Code Editor (Syntax Highlighting, Error Gutter, Autosave) ---------- */
+const code = $("#code"), gutter = $("#gutter"), codeHighlight = $("#code-highlight");
+let lastLineCount = -1;
+let activeErrorLines = new Map(); // lineNum -> error message
+let gutterTimer = null;
+let autosaveTimer = null;
+
+function highlightZynoScript(src, errorLinesMap) {
+  const g = zsNormalizeGrammar((state.grammar && state.grammar.grammar) ? state.grammar.grammar : ZS_DEFAULT_GRAMMAR);
+  const kwMap = {};
+  for (const [role, word] of Object.entries(g.keywords)) kwMap[word] = role;
+  const ops = Object.values(g.operators).filter((o) => typeof o === "string" && o.length > 0).sort((a, b) => b.length - a.length);
+  const opParts = ops.map((o) => {
+    let e = zsEscRegex(o);
+    if (/^[A-Za-z_]/.test(o)) e = "\\b" + e;
+    if (/[A-Za-z0-9_]$/.test(o)) e = e + "\\b";
+    return e;
+  });
+  const opRx = opParts.join("|");
+  const tokenRx = new RegExp(
+    `(\\/~~[\\s\\S]*?~~\\/|#~[\\s\\S]*?~#|\\/\\/[^\\n]*)|("[^"\\n]*"|'[^'\\n]')|(\\b\\d+\\.\\d+\\b|\\b\\d+\\b)|(${opRx})|(\\b[A-Za-z_]\\w*\\b)`,
+    "g"
+  );
+
+  let out = "";
+  let lastIdx = 0;
+  let m;
+  while ((m = tokenRx.exec(src)) !== null) {
+    if (m.index > lastIdx) out += esc(src.slice(lastIdx, m.index));
+    const tok = m[0];
+    if (m[1] !== undefined) {
+      // Preserve line breaks inside multi-line block comments so per-line wrapping stays aligned
+      out += tok.split("\n").map((seg) => `<span class="hl-com">${esc(seg)}</span>`).join("\n");
+    } else if (m[2] !== undefined) {
+      out += `<span class="hl-str">${esc(tok)}</span>`;
+    } else if (m[3] !== undefined) {
+      out += `<span class="hl-num">${esc(tok)}</span>`;
+    } else if (m[4] !== undefined) {
+      out += `<span class="hl-op">${esc(tok)}</span>`;
+    } else if (m[5] !== undefined && tok in kwMap) {
+      const r = kwMap[tok];
+      const cls = r in ZS_TYPE_OF_ROLE ? "hl-type" : (r === "TRUE" || r === "FALSE" ? "hl-bool" : "hl-kw");
+      out += `<span class="${cls}">${esc(tok)}</span>`;
+    } else {
+      out += esc(tok);
+    }
+    lastIdx = m.index + tok.length;
+  }
+  if (lastIdx < src.length) out += esc(src.slice(lastIdx));
+
+  if (errorLinesMap && errorLinesMap.size > 0) {
+    out = out.split("\n").map((lineHtml, idx) => {
+      const ln = idx + 1;
+      return errorLinesMap.has(ln) ? `<span class="hl-err-line">${lineHtml || " "}</span>` : lineHtml;
+    }).join("\n");
+  }
+  return out + (src.endsWith("\n") ? " " : "");
 }
 
-code.addEventListener("input", updateGutter);
-code.addEventListener("scroll", () => (gutter.scrollTop = code.scrollTop));
+function updateSyntaxHighlight() {
+  if (!codeHighlight) return;
+  codeHighlight.innerHTML = highlightZynoScript(code.value, activeErrorLines);
+}
+
+function renderGutterNow(force = false) {
+  const n = code.value.split("\n").length;
+  $("#code-stats").textContent = `${n} line${n > 1 ? "s" : ""} · ${code.value.length} chars`;
+  if (!force && n === lastLineCount && activeErrorLines.size === 0) return;
+  lastLineCount = n;
+  const rows = [];
+  for (let i = 1; i <= n; i++) {
+    const errMsg = activeErrorLines.get(i);
+    if (errMsg) {
+      rows.push(`<span class="gutter-line is-error" data-line="${i}" title="Line ${i}: ${esc(errMsg)}">${i}</span>`);
+    } else {
+      rows.push(`<span class="gutter-line">${i}</span>`);
+    }
+  }
+  gutter.innerHTML = rows.join("");
+}
+
+function setEditorErrors(errs) {
+  activeErrorLines.clear();
+  if (Array.isArray(errs)) {
+    for (const e of errs) {
+      if (e && e.line && !activeErrorLines.has(e.line)) {
+        activeErrorLines.set(e.line, e.message || "Error");
+      }
+    }
+  }
+  renderGutterNow(true);
+  updateSyntaxHighlight();
+}
+
+function updateGutter() {
+  updateSyntaxHighlight();
+  const n = code.value.split("\n").length;
+  $("#code-stats").textContent = `${n} line${n > 1 ? "s" : ""} · ${code.value.length} chars`;
+  if (n !== lastLineCount) {
+    clearTimeout(gutterTimer);
+    gutterTimer = setTimeout(() => renderGutterNow(true), 16);
+  }
+  clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem("zs_autosave_code", code.value);
+      localStorage.setItem("zs_autosave_sample", sample.value);
+    } catch {}
+  }, 250);
+}
+
+gutter.addEventListener("click", (e) => {
+  const ln = e.target.closest(".gutter-line[data-line]");
+  if (ln) jumpToLine(+ln.dataset.line);
+});
+
+code.addEventListener("input", () => {
+  if (activeErrorLines.size > 0) {
+    activeErrorLines.clear();
+    renderGutterNow(true);
+  }
+  updateGutter();
+});
+code.addEventListener("scroll", () => {
+  gutter.scrollTop = code.scrollTop;
+  if (codeHighlight) {
+    codeHighlight.scrollTop = code.scrollTop;
+    codeHighlight.scrollLeft = code.scrollLeft;
+  }
+});
 code.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
     e.preventDefault();
@@ -2046,12 +2365,24 @@ sample.innerHTML = Object.keys(SAMPLES).map((k) => `<option>${esc(k)}</option>`)
 enhanceSelect(sample);
 sample.addEventListener("change", () => {
   code.value = SAMPLES[sample.value];
+  activeErrorLines.clear();
+  renderGutterNow(true);
   updateGutter();
   resetStates();
   toast(`Loaded "${sample.value}"`);
 });
-code.value = SAMPLES[sample.value];
-updateGutter();
+
+// Restore autosaved code or default sample
+(function initEditorContent() {
+  const savedSample = localStorage.getItem("zs_autosave_sample");
+  const savedCode = localStorage.getItem("zs_autosave_code");
+  if (savedSample && SAMPLES[savedSample]) {
+    sample.value = savedSample;
+  }
+  code.value = (savedCode && savedCode.trim().length > 0) ? savedCode : SAMPLES[sample.value];
+  renderGutterNow(true);
+  updateSyntaxHighlight();
+})();
 
 const btnRunEditor = $("#btn-run-editor");
 if (btnRunEditor) {
@@ -2061,10 +2392,17 @@ if (btnRunEditor) {
 function jumpToLine(line) {
   const lines = code.value.split("\n");
   const start = lines.slice(0, line - 1).reduce((n, l) => n + l.length + 1, 0);
+  if (typeof switchMobileWorkbenchPane === "function") switchMobileWorkbenchPane("editor");
   code.focus();
   code.setSelectionRange(start, start + (lines[line - 1] || "").length);
   const lineHeight = parseFloat(getComputedStyle(code).lineHeight) || 21;
   code.scrollTop = Math.max(0, (line - 4) * lineHeight);
+  const editorBox = $("#code-editor-box");
+  if (editorBox) {
+    editorBox.classList.remove("line-shake");
+    void editorBox.offsetWidth;
+    editorBox.classList.add("line-shake");
+  }
 }
 
 /* ---------- Compiler Pipeline Stages ---------- */
@@ -2095,7 +2433,7 @@ async function runStage(stage) {
   if (compileCache.has(cacheKey)) {
     const cachedRes = compileCache.get(cacheKey);
     state.lastResults = cachedRes;
-    STAGES.forEach((s, i) => setState(s, i > upto ? "idle" : cachedRes.results[s] ? (cachedRes.results[s].ok ? "ok" : "errors") : "blocked"));
+    animateStageRipple(upto, cachedRes);
     renderOutput(stage, cachedRes);
     $$(".stage, #run-all, #btn-run-editor").forEach((b) => {
       b.disabled = false;
@@ -2111,7 +2449,7 @@ async function runStage(stage) {
       compileCache.set(cacheKey, res);
       if (compileCache.size > 50) compileCache.delete(compileCache.keys().next().value);
       state.lastResults = res;
-      STAGES.forEach((s, i) => setState(s, i > upto ? "idle" : res.results[s] ? (res.results[s].ok ? "ok" : "errors") : "blocked"));
+      animateStageRipple(upto, res);
       renderOutput(stage, res);
       Api.post(`/api/compile/${stage}`, { source: code.value }).catch(() => {});
       return;
@@ -2120,7 +2458,7 @@ async function runStage(stage) {
     compileCache.set(cacheKey, res);
     if (compileCache.size > 50) compileCache.delete(compileCache.keys().next().value);
     state.lastResults = res;
-    STAGES.forEach((s, i) => setState(s, i > upto ? "idle" : res.results[s] ? (res.results[s].ok ? "ok" : "errors") : "blocked"));
+    animateStageRipple(upto, res);
     renderOutput(stage, res);
   } catch (err) {
     resetStates();
@@ -2206,9 +2544,34 @@ const RENDER = {
   },
 };
 
+function animateStageRipple(uptoIdx, res) {
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  STAGES.forEach((s, i) => {
+    const stateVal = i > uptoIdx ? "idle" : res.results[s] ? (res.results[s].ok ? "ok" : "errors") : "blocked";
+    setState(s, stateVal);
+    const el = $(`.stage[data-stage="${s}"]`);
+    if (!el) return;
+    el.classList.remove("stage-pulse");
+    if (!reduceMotion && i <= uptoIdx && stateVal === "ok") {
+      setTimeout(() => {
+        el.classList.add("stage-pulse");
+      }, i * 55);
+    }
+  });
+}
+
 function renderOutput(stage, res) {
   const shown = res.results[stage] ? stage : res.blocked_by;
   const r = res.results[shown];
+  setEditorErrors(r.ok ? [] : r.errors);
+  if (!r.ok && r.errors && r.errors.length) {
+    const editorBox = $("#code-editor-box");
+    if (editorBox) {
+      editorBox.classList.remove("line-shake");
+      void editorBox.offsetWidth;
+      editorBox.classList.add("line-shake");
+    }
+  }
   $("#out-title").textContent = STAGE_TITLE[shown];
   const badge = $("#out-status");
   badge.hidden = false;
@@ -2217,6 +2580,18 @@ function renderOutput(stage, res) {
   const notice = shown !== stage ? `<div class="notice"><span>${STAGE_TITLE[stage]} blocked by errors in ${STAGE_TITLE[shown]}. Resolve them to continue.</span></div>` : "";
   const outputEl = $("#output");
   outputEl.innerHTML = `<div class="out-anim">${notice}${RENDER[shown](r)}</div>`;
+  if (shown === "output" && r.ok && r.output && r.output.length > 0 && r.output.length <= 12) {
+    const consoleEl = outputEl.querySelector("pre.console");
+    const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (consoleEl && !reduceMotion) {
+      consoleEl.innerHTML = r.output.map((lineText, idx) =>
+        `<span class="console-line-reveal" style="--line-i:${idx}">${esc(lineText)}</span>`
+      ).join("\n");
+    }
+  }
+  if (window.innerWidth <= 640 && typeof switchMobileWorkbenchPane === "function") {
+    switchMobileWorkbenchPane("inspector");
+  }
   if (typeof hydrateIcons === "function") hydrateIcons(outputEl);
 
   // Jump to code line on error click
@@ -2447,6 +2822,7 @@ function renderGuide() {
   $("#gd-halt").textContent = `${k.HALT};`;
   $("#gd-decl1").textContent = `${k.LET} ${k.INT} a ${o.ASSIGN} 5;`;
   $("#gd-decl2").textContent = `${k.LET} x ${o.ASSIGN} 5;`;
+  if ($("#gd-cast")) $("#gd-cast").textContent = `x ${o.CAST || "as~"} ${k.INT}`;
 }
 
 $("#guide-try").addEventListener("click", () => {
@@ -2679,7 +3055,10 @@ if ($("#btn-prune-all")) $("#btn-prune-all").addEventListener("click", () => han
     $("#auth-user").value = savedUser;
     $("#auth-remember").checked = true;
   }
-  if (!Api.token) return showView("auth");
+  if (!Api.token) {
+    fetch("/api/health", { method: "GET" }).catch(() => {});
+    return showView("auth");
+  }
   try {
     const me = await Api.get("/api/auth/me");
     await enterApp(me);
@@ -2782,6 +3161,21 @@ function getCommands() {
         resetStates();
         showView("workbench");
         toast('Loaded "Working program"');
+      },
+    },
+    {
+      id: "sample-casting",
+      group: "Sample Programs",
+      name: "Load Type Casting (as~) Sample",
+      desc: "Demonstrates explicit type conversion between whole, part, phrase, flag, and mark",
+      icon: "file",
+      action: () => {
+        sample.value = "Type casting (as~)";
+        code.value = SAMPLES[sample.value];
+        updateGutter();
+        resetStates();
+        showView("workbench");
+        toast('Loaded "Type casting (as~)"');
       },
     },
     {

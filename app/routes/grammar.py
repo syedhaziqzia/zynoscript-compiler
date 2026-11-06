@@ -13,11 +13,12 @@ router = APIRouter(prefix="/api/grammar", tags=["grammar"])
 
 
 def load_for(user: dict) -> dict:
-    return json.loads(user["grammar_json"]) if user.get("grammar_json") else G.default()
+    return G.normalize(json.loads(user["grammar_json"])) if user.get("grammar_json") else G.default()
 
 
 def payload(g: dict) -> dict:
-    return {"grammar": g, "bnf": G.bnf(g), "keyword_roles": G.KEYWORD_ROLES, "operator_roles": G.OPERATOR_ROLES}
+    norm = G.normalize(g)
+    return {"grammar": norm, "bnf": G.bnf(norm), "keyword_roles": G.KEYWORD_ROLES, "operator_roles": G.OPERATOR_ROLES}
 
 
 class GrammarIn(BaseModel):
@@ -32,7 +33,7 @@ def get_grammar(user: dict = Depends(current_user)):
 
 @router.put("")
 def update_grammar(body: GrammarIn, user: dict = Depends(current_user)):
-    g = {"name": G.DEFAULT_GRAMMAR["name"], "keywords": body.keywords, "operators": body.operators}
+    g = {"name": G.DEFAULT_GRAMMAR["name"], "keywords": dict(body.keywords), "operators": dict(body.operators)}
     problems = G.validate(g)
     if problems:
         logs.record(user, "grammar_update", "error", "; ".join(problems)[:200])

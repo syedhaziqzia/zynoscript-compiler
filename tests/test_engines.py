@@ -1,6 +1,10 @@
 """Engine tests: every engine is called on its own, with plain data in and plain data out."""
+import json
+import subprocess
 import unittest
+from pathlib import Path
 
+from app import pipeline
 from app.engines import grammar, icg, lexical, output, semantic, syntax
 
 G = grammar.default()
@@ -29,14 +33,20 @@ class EngineTests(unittest.TestCase):
         self.assertEqual([t["lexeme"] for t in r["tokens"]], ["let", "whole", "a", ":=", "1", ";", "beam", "a", ";"])
 
     def test_lexer_block_comments_and_line_tracking(self):
-        src = "#~ multi-line\n   block comment ~#\nlet whole x := 10;\nbeam x;\nhalt;"
+        src = "/~~ multi-line\n   block comment ~~/\nlet whole x := 10;\nbeam x;\nhalt;"
         r = lexical.run(src, G)
         self.assertTrue(r["ok"])
         self.assertEqual(r["tokens"][0]["lexeme"], "let")
         self.assertEqual(r["tokens"][0]["line"], 3)
 
+        # Legacy #~ ... ~# also supported
+        src_legacy = "#~ legacy\n   comment ~#\nlet whole y := 5;\nhalt;"
+        r_leg = lexical.run(src_legacy, G)
+        self.assertTrue(r_leg["ok"])
+        self.assertEqual(r_leg["tokens"][0]["line"], 3)
+
     def test_lexer_unterminated_block_comment_reported(self):
-        r = lexical.run("let whole a := 1;\n#~ unclosed comment\nbeam a;", G)
+        r = lexical.run("let whole a := 1;\n/~~ unclosed comment\nbeam a;", G)
         self.assertFalse(r["ok"])
         self.assertEqual(r["errors"][0]["line"], 2)
         self.assertIn("unterminated block comment", r["errors"][0]["message"])
@@ -46,6 +56,102 @@ class EngineTests(unittest.TestCase):
         bad["operators"]["DIV"] = "//"
         problems = grammar.validate(bad)
         self.assertTrue(any("clashes with comment markers" in p for p in problems))
+
+        bad2 = grammar.default()
+        bad2["operators"]["MUL"] = "/~~"
+        problems2 = grammar.validate(bad2)
+        self.assertTrue(any("clashes with comment markers" in p for p in problems2))
+
+    def test_type_casting_all_stages(self):
+        src = (
+            'let part pi := 3.89;\n'
+            'let whole w := pi as~ whole;\n'
+            'let part p := w as~ part;\n'
+            'let whole parsed := "42" as~ whole;\n'
+            'let whole b := true as~ whole;\n'
+            'let flag f := 0 as~ flag;\n'
+            'let whole code := \'A\' as~ whole;\n'
+            'let mark ch := 66 as~ mark;\n'
+            'let phrase s := (w +~ parsed) as~ phrase;\n'
+            'beam w;\n'
+            'beam p;\n'
+            'beam b;\n'
+            'beam f;\n'
+            'beam code;\n'
+            'beam ch;\n'
+            'beam s;\n'
+            'halt;'
+        )
+        res = pipeline.run("output", src, G)
+        self.assertIsNone(res["blocked_by"])
+        self.assertEqual(res["results"]["output"]["output"], ["3", "3.0", "1", "false", "65", "B", "45"])
+        self.assertTrue(any(q["op"] == "as~" for q in res["results"]["icg"]["quads"]))
+
+    def test_type_casting_semantic_and_runtime_errors(self):
+        # Semantic Rule 8: mark -> part is not a permitted cast
+        bad_cast_ast = ast_of("let mark c := 'A';\nlet part p := c as~ part;\nhalt;")
+        sem = semantic.run(bad_cast_ast, G)
+        self.assertFalse(sem["ok"])
+        self.assertEqual(sem["errors"][0]["rule"], 8)
+
+        # Runtime error: non-numeric phrase -> whole
+        bad_runtime_ast = ast_of('let whole n := "abc" as~ whole;\nbeam n;\nhalt;')
+        out = output.run(bad_runtime_ast, G)
+        self.assertFalse(out["ok"])
+        self.assertIn("cannot convert phrase", out["errors"][0]["message"])
+
+    def test_browser_and_server_compiler_parity(self):
+        root = Path(__file__).resolve().parent.parent
+        node_script = r"""
+const fs = require("fs");
+const vm = require("vm");
+const samplesCode = fs.readFileSync("public/js/samples.js", "utf8");
+const appCode = fs.readFileSync("public/js/app.js", "utf8");
+
+// Extract pure compiler functions up to "const compileCache = new Map();"
+const pureCompilerCode = appCode.split("const compileCache = new Map();")[0];
+const sandbox = { window: {}, document: { querySelector: () => null, querySelectorAll: () => [] }, console };
+vm.createContext(sandbox);
+vm.runInContext(samplesCode + "\n" + pureCompilerCode + "\nwindow.SAMPLES = SAMPLES; window.compileLocal = compileLocal; window.ZS_DEFAULT_GRAMMAR = ZS_DEFAULT_GRAMMAR;", sandbox);
+
+const out = {};
+for (const [name, code] of Object.entries(sandbox.window.SAMPLES)) {
+  out[name] = {
+    code,
+    res: sandbox.window.compileLocal("output", code, sandbox.window.ZS_DEFAULT_GRAMMAR)
+  };
+}
+process.stdout.write(JSON.stringify(out));
+"""
+        proc = subprocess.run(
+            ["node", "-e", node_script],
+            cwd=str(root),
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        js_bundle = json.loads(proc.stdout)
+        self.assertGreaterEqual(len(js_bundle), 8)
+
+        for name, item in js_bundle.items():
+            code = item["code"]
+            js_res = item["res"]
+            py_res = pipeline.run("output", code, G)
+            self.assertEqual(js_res["blocked_by"], py_res["blocked_by"], f"Blocked_by mismatch in {name}")
+            for stg in ("lexical", "syntax", "semantic", "icg", "output"):
+                if stg in py_res["results"]:
+                    self.assertEqual(js_res["results"][stg]["ok"], py_res["results"][stg]["ok"], f"{stg} ok mismatch in {name}")
+                    self.assertEqual(
+                        len(js_res["results"][stg]["errors"]),
+                        len(py_res["results"][stg]["errors"]),
+                        f"{stg} error count mismatch in {name}",
+                    )
+            if "output" in py_res["results"] and py_res["results"]["output"]["ok"]:
+                self.assertEqual(
+                    js_res["results"]["output"]["output"],
+                    py_res["results"]["output"]["output"],
+                    f"Console output mismatch in {name}",
+                )
 
     def test_lexer_line_and_category_tables(self):
         r = lexical.run("let whole a := 1;\nbeam a;", G)
