@@ -985,7 +985,7 @@ kbd {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(540px, 92vw);
+  width: min(580px, 94vw);
   background: #ffffff;
   border-left: 1px solid var(--line);
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12);
@@ -1080,6 +1080,142 @@ kbd {
   font-family: var(--font-mono);
   font-size: 12.5px;
   padding: 5px 8px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+}
+
+
+/* Enhanced Grammar Drawer Card Layout */
+.grammar-section {
+  margin-bottom: 20px;
+}
+
+.grammar-section:last-child {
+  margin-bottom: 8px;
+}
+
+.grammar-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.grammar-section-title::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line-subtle);
+}
+
+.grammar-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
+}
+
+.grammar-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.grammar-card:hover {
+  background: #ffffff;
+  border-color: var(--line-strong);
+}
+
+.grammar-card:focus-within {
+  background: #ffffff;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand-glow);
+}
+
+.grammar-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+  padding-right: 10px;
+}
+
+.grammar-card-role-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.grammar-role-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
+  background: var(--bg-muted);
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.grammar-card-label {
+  font-size: 12px;
+  color: var(--ink-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.grammar-card-input {
+  width: 86px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--ink);
+  text-align: center;
+  transition: border-color 0.15s ease;
+}
+
+.grammar-card-input:focus {
+  border-color: var(--brand);
+  outline: none;
+}
+
+.grammar-rules-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-subtle);
+}
+
+.grammar-rules-footer {
+  margin-top: 12px;
+}
+
+.bnf-code-view {
+  max-height: 520px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  border-radius: var(--r-md);
   background: var(--bg-subtle);
   border: 1px solid var(--line);
 }

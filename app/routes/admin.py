@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from .. import logs
-from ..auth import hash_password, new_salt, require_admin
+from ..auth import hash_password, invalidate_session_cache, new_salt, require_admin
 from ..config import PASSWORD_MIN_LEN
 from ..db import connect, get_active_db_type
 from ..engines import grammar as G
@@ -103,6 +103,7 @@ def reset_password(user_id: int, body: NewPassword, admin: dict = Depends(requir
         target = find_user(conn, user_id)
         conn.execute("UPDATE users SET password_hash = ?, salt = ? WHERE id = ?", (hash_password(body.password, salt), salt, user_id))
         conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))      # signs that user out everywhere
+    invalidate_session_cache(user_id=user_id)
     logs.record(admin, "admin_reset_password", detail=f"user: {target['username']}")
     return {"ok": True}
 
@@ -114,6 +115,7 @@ def set_role(user_id: int, body: NewRole, admin: dict = Depends(require_admin)):
     with connect() as conn:
         target = find_user(conn, user_id)
         conn.execute("UPDATE users SET role = ? WHERE id = ?", (body.role, user_id))
+    invalidate_session_cache(user_id=user_id)
     logs.record(admin, "admin_set_role", detail=f"user: {target['username']} -> {body.role}")
     return {"ok": True}
 
@@ -135,6 +137,7 @@ def reset_user_grammar(user_id: int, admin: dict = Depends(require_admin)):
     with connect() as conn:
         target = find_user(conn, user_id)
         conn.execute("UPDATE users SET grammar_json = NULL WHERE id = ?", (user_id,))
+    invalidate_session_cache(user_id=user_id)
     logs.record(admin, "admin_reset_user_grammar", detail=f"user: {target['username']}")
     return {"ok": True}
 
@@ -147,6 +150,7 @@ def delete_user(user_id: int, admin: dict = Depends(require_admin)):
         target = find_user(conn, user_id)
         conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
         conn.execute("DELETE FROM users WHERE id = ?", (user_id,))             # their log rows are kept for the record
+    invalidate_session_cache(user_id=user_id)
     logs.record(admin, "admin_delete_user", detail=f"user: {target['username']}")
     return {"ok": True}
 

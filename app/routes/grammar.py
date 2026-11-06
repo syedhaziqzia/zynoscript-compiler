@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from .. import logs
-from ..auth import current_user
+from ..auth import current_user, invalidate_session_cache
 from ..db import connect
 from ..engines import grammar as G
 
@@ -39,6 +39,7 @@ def update_grammar(body: GrammarIn, user: dict = Depends(current_user)):
         raise HTTPException(422, {"message": "The grammar has problems.", "problems": problems})
     with connect() as conn:
         conn.execute("UPDATE users SET grammar_json = ? WHERE id = ?", (json.dumps(g), user["id"]))
+    invalidate_session_cache(user_id=user["id"])
     logs.record(user, "grammar_update")
     return payload(g)
 
@@ -47,5 +48,6 @@ def update_grammar(body: GrammarIn, user: dict = Depends(current_user)):
 def reset_grammar(user: dict = Depends(current_user)):
     with connect() as conn:
         conn.execute("UPDATE users SET grammar_json = NULL WHERE id = ?", (user["id"],))
+    invalidate_session_cache(user_id=user["id"])
     logs.record(user, "grammar_reset")
     return payload(G.default())

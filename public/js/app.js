@@ -18,6 +18,21 @@ const ACTIONS = [
   "admin_reset_password", "admin_set_role", "admin_delete_user"
 ];
 
+const GRAMMAR_GROUPS = {
+  keywords: [
+    { title: "Statements & Control Flow", roles: ["LET", "PRINT", "IF", "ELSE", "WHILE", "HALT"] },
+    { title: "Primitive Data Types", roles: ["INT", "FLOAT", "STRING", "BOOL", "CHAR"] },
+    { title: "Boolean Constants", roles: ["TRUE", "FALSE"] },
+  ],
+  operators: [
+    { title: "Assignment & Arithmetic", roles: ["ASSIGN", "ADD", "SUB", "MUL", "DIV"] },
+    { title: "Relational Comparisons", roles: ["GT", "LT", "EQ", "NE"] },
+    { title: "Logical Operators", roles: ["AND", "OR", "NOT"] },
+  ],
+};
+
+const compileCache = new Map();
+
 const state = {
   user: null,
   grammar: null,
@@ -1229,16 +1244,52 @@ function renderGrammar() {
   $$("[data-gtab]").forEach((t) => t.classList.toggle("is-active", t.dataset.gtab === tab));
   $("#grammar-save").hidden = $("#grammar-reset").hidden = tab === "rules";
   if (tab === "rules") {
-    body.innerHTML = `<pre class="code">${esc(state.grammar.bnf)}</pre><p class="muted text-small" style="margin:8px 0 0">Grammar rules use your saved custom keywords and operators. Every statement ends with <code>;</code> and the program terminates with <code>halt;</code>.</p>`;
+    body.innerHTML = `
+      <div class="grammar-rules-header">
+        <span class="muted text-small">Formal language specification with current custom tokens</span>
+        <button type="button" class="btn ghost small" id="btn-copy-bnf"><span data-icon="copy"></span> Copy BNF</button>
+      </div>
+      <pre class="code bnf-code-view">${esc(state.grammar.bnf)}</pre>
+      <div class="grammar-rules-footer">
+        <p class="muted text-small">Every statement ends with a semicolon <code>;</code>. Programs terminate with <code>halt;</code>.</p>
+      </div>`;
+    const btnCopy = $("#btn-copy-bnf");
+    if (btnCopy) {
+      btnCopy.addEventListener("click", () => {
+        navigator.clipboard.writeText(state.grammar.bnf || "");
+        toast("BNF rules copied to clipboard");
+      });
+    }
     return;
   }
-  const roles = Object.entries(tab === "keywords" ? state.grammar.keyword_roles : state.grammar.operator_roles);
-  const half = Math.ceil(roles.length / 2);
-  const tableHtml = (rows) => `<table class="gtable">${rows.map(([role, meaning]) => `<tr>
-    <td><label for="g-${role}">${esc(meaning)}</label></td>
-    <td><input id="g-${role}" data-role="${role}" value="${esc(state.draft[tab][role])}" spellcheck="false" autocomplete="off"></td>
-  </tr>`).join("")}</table>`;
-  body.innerHTML = `<div class="grid-2">${tableHtml(roles.slice(0, half))}${tableHtml(roles.slice(half))}</div><div id="grammar-problems"></div>`;
+
+  const groups = GRAMMAR_GROUPS[tab] || [];
+  const rolesMap = tab === "keywords" ? state.grammar.keyword_roles : state.grammar.operator_roles;
+
+  const groupsHtml = groups.map((grp) => {
+    const cards = grp.roles.map((role) => {
+      const meaning = rolesMap[role] || role;
+      const val = state.draft[tab][role] ?? "";
+      return `
+        <div class="grammar-card">
+          <div class="grammar-card-info">
+            <div class="grammar-card-role-row">
+              <span class="grammar-role-badge">${esc(role)}</span>
+              <label class="grammar-card-label" for="g-${role}" title="${esc(meaning)}">${esc(meaning)}</label>
+            </div>
+          </div>
+          <input class="grammar-card-input" id="g-${role}" data-role="${role}" value="${esc(val)}" spellcheck="false" autocomplete="off" placeholder="${esc(role)}">
+        </div>`;
+    }).join("");
+
+    return `
+      <div class="grammar-section">
+        <div class="grammar-section-title">${esc(grp.title)}</div>
+        <div class="grammar-cards-grid">${cards}</div>
+      </div>`;
+  }).join("");
+
+  body.innerHTML = `${groupsHtml}<div id="grammar-problems"></div>`;
   $$("input[data-role]", body).forEach((i) => i.addEventListener("input", () => {
     state.draft[tab][i.dataset.role] = i.value.trim();
     $("#grammar-msg").textContent = "Unsaved changes";
@@ -1258,6 +1309,7 @@ $("#grammar-save").addEventListener("click", async () => {
     }));
     $("#grammar-msg").textContent = "Saved. Engines now use updated grammar.";
     toast("Grammar updated successfully");
+    compileCache.clear();
   } catch (err) {
     const list = (err.problems || [err.message]).map((p) => `<li>${esc(p)}</li>`).join("");
     $("#grammar-problems").innerHTML = `<ul class="problems">${list}</ul>`;
@@ -1268,6 +1320,7 @@ $("#grammar-reset").addEventListener("click", async () => {
   try {
     setGrammar(await Api.post("/api/grammar/reset"));
     $("#grammar-msg").textContent = "Reset to default ZynoScript grammar.";
+    compileCache.clear();
     toast("Grammar reset to default");
   } catch (err) {
     if (err.status === 401) return leaveApp(err.message);
@@ -1346,8 +1399,23 @@ async function runStage(stage) {
   const runAllBtn = $("#run-all");
   if (runBtn) runBtn.classList.add("is-running");
   if (runAllBtn) runAllBtn.classList.add("is-running");
+  const cacheKey = `${stage}::${code.value}`;
+  if (compileCache.has(cacheKey)) {
+    const cachedRes = compileCache.get(cacheKey);
+    state.lastResults = cachedRes;
+    STAGES.forEach((s, i) => setState(s, i > upto ? "idle" : cachedRes.results[s] ? (cachedRes.results[s].ok ? "ok" : "errors") : "blocked"));
+    renderOutput(stage, cachedRes);
+    $$(".stage, #run-all, #btn-run-editor").forEach((b) => {
+      b.disabled = false;
+      b.classList.remove("is-running");
+    });
+    return;
+  }
+
   try {
     const res = await Api.post(`/api/compile/${stage}`, { source: code.value });
+    compileCache.set(cacheKey, res);
+    if (compileCache.size > 50) compileCache.delete(compileCache.keys().next().value);
     state.lastResults = res;
     STAGES.forEach((s, i) => setState(s, i > upto ? "idle" : res.results[s] ? (res.results[s].ok ? "ok" : "errors") : "blocked"));
     renderOutput(stage, res);

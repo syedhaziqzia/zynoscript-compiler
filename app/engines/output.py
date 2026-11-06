@@ -87,7 +87,7 @@ class Interpreter:
         self.tick(s["line"])
         k = s["node"]
         if k == "decl":
-            value = self.eval(s["init"]) if s["init"] else DEFAULTS[s["type"]]
+            value = self.eval(s["init"]) if s["init"] else DEFAULTS.get(s["type"], 0)
             self.types[s["name"]] = s["type"]
             self.env[s["name"]] = float(value) if s["type"] == "float" and isinstance(value, int) else value
         elif k == "assign":
