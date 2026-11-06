@@ -1337,12 +1337,18 @@ async function runStage(stage) {
   state.selected = stage;
   $$(".stage").forEach((b) => b.classList.toggle("is-selected", b.dataset.stage === stage));
   resetStates();
-  setState(stage, "running");
+  const upto = STAGES.indexOf(stage);
+  STAGES.forEach((s, i) => {
+    if (i <= upto) setState(s, "running");
+  });
   $$(".stage, #run-all, #btn-run-editor").forEach((b) => (b.disabled = true));
+  const runBtn = $("#btn-run-editor");
+  const runAllBtn = $("#run-all");
+  if (runBtn) runBtn.classList.add("is-running");
+  if (runAllBtn) runAllBtn.classList.add("is-running");
   try {
     const res = await Api.post(`/api/compile/${stage}`, { source: code.value });
     state.lastResults = res;
-    const upto = STAGES.indexOf(stage);
     STAGES.forEach((s, i) => setState(s, i > upto ? "idle" : res.results[s] ? (res.results[s].ok ? "ok" : "errors") : "blocked"));
     renderOutput(stage, res);
   } catch (err) {
@@ -1350,7 +1356,10 @@ async function runStage(stage) {
     if (err.status === 401) return leaveApp(err.message);
     $("#output").innerHTML = `<p class="form-error">${esc(err.message)}</p>`;
   } finally {
-    $$(".stage, #run-all, #btn-run-editor").forEach((b) => (b.disabled = false));
+    $$(".stage, #run-all, #btn-run-editor").forEach((b) => {
+      b.disabled = false;
+      b.classList.remove("is-running");
+    });
   }
 }
 

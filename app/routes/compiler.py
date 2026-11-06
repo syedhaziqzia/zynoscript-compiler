@@ -1,5 +1,5 @@
 """One endpoint per compiler stage. Each call runs that stage (and the stages it needs) on the posted source."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 
 from .. import logs, pipeline
@@ -15,7 +15,7 @@ class Program(BaseModel):
 
 
 @router.post("/{stage}")
-def compile_program(stage: str, body: Program, user: dict = Depends(current_user)):
+def compile_program(stage: str, body: Program, background_tasks: BackgroundTasks, user: dict = Depends(current_user)):
     if stage not in pipeline.STAGES:
         raise HTTPException(404, f"Unknown stage '{stage}'. Use one of: {', '.join(pipeline.STAGES)}.")
     if len(body.source) > MAX_SOURCE_CHARS:
@@ -27,5 +27,5 @@ def compile_program(stage: str, body: Program, user: dict = Depends(current_user
     else:
         status = "ok" if stage_result["ok"] else "error"
         detail = "" if stage_result["ok"] else f"{len(stage_result['errors'])} error(s)"
-    logs.record(user, f"run_{stage}", status, detail, source=body.source)
+    background_tasks.add_task(logs.record, user, f"run_{stage}", status, detail, source=body.source)
     return result

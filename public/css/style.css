@@ -1216,6 +1216,11 @@ pre.code {
   50% { opacity: 0.3; transform: scale(1.4); }
 }
 
+#run-all.is-running, #btn-run-editor.is-running {
+  opacity: 0.75;
+  cursor: wait;
+}
+
 .inspector-header-actions {
   display: flex;
   align-items: center;

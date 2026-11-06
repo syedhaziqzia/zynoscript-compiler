@@ -220,6 +220,28 @@ def get_active_db_type() -> str:
     return "SQLite (Local)"
 
 
+_cached_pg_conn = None
+
+
+def _get_pg_conn(db_url: str):
+    """Reuses an open PostgreSQL connection across warm serverless requests to avoid repeated SSL/TCP handshakes."""
+    global _cached_pg_conn
+    if _cached_pg_conn is not None:
+        try:
+            if _cached_pg_conn.closed == 0:
+                _cached_pg_conn.rollback()
+                return _cached_pg_conn
+        except Exception:
+            try:
+                _cached_pg_conn.close()
+            except Exception:
+                pass
+            _cached_pg_conn = None
+
+    _cached_pg_conn = psycopg2.connect(db_url, connect_timeout=10)
+    return _cached_pg_conn
+
+
 @contextmanager
 def connect():
     ensure_db()
@@ -227,7 +249,7 @@ def connect():
     raw_conn = None
     if db_url and psycopg2 is not None:
         try:
-            raw_conn = psycopg2.connect(db_url, connect_timeout=10)
+            raw_conn = _get_pg_conn(db_url)
         except Exception as pg_err:
             print(f"Warning: PostgreSQL connection failed ({pg_err}), falling back to SQLite: {DB_PATH}")
             raw_conn = None
@@ -237,8 +259,12 @@ def connect():
         try:
             yield wrapped
             wrapped.commit()
-        finally:
-            wrapped.close()
+        except Exception:
+            try:
+                raw_conn.rollback()
+            except Exception:
+                pass
+            raise
         return
 
     conn = sqlite3.connect(DB_PATH, timeout=10.0)
