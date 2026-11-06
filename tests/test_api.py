@@ -251,6 +251,18 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(r.headers.get("X-Content-Type-Options"), "nosniff")
         self.assertEqual(r.headers.get("X-XSS-Protection"), "1; mode=block")
         self.assertEqual(r.headers.get("Referrer-Policy"), "strict-origin-when-cross-origin")
+        self.assertEqual(r.headers.get("Permissions-Policy"), "camera=(), microphone=(), geolocation=()")
+        self.assertEqual(r.headers.get("Cache-Control"), "no-store")
+
+    def test_login_brute_force_rate_limit(self):
+        from app import ratelimit
+        ratelimit.reset()
+        for _ in range(config.LOGIN_MAX_FAILURES):
+            res = self.client.post("/api/auth/login", json={"username": "ali", "password": "wrongpassword"})
+            self.assertEqual(res.status_code, 401)
+        blocked = self.client.post("/api/auth/login", json={"username": "ali", "password": "wrongpassword"})
+        self.assertEqual(blocked.status_code, 429)
+        ratelimit.reset()
 
     def test_public_registration_always_assigns_user_role(self):
         from contextlib import contextmanager

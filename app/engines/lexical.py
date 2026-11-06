@@ -17,7 +17,7 @@ CATEGORY = {
 def _build(grammar):
     """Compiles the grammar into one regex. Longest operators go first (so '&&~' is not '&&' + '~')."""
     ops = sorted(grammar["operators"].values(), key=len, reverse=True)
-    parts = [("COMMENT", r"//[^\n]*"), ("DEC", r"\d+\.\d+"), ("NUM", r"\d+"), ("STR", r'"[^"\n]*"'), ("CHR", r"'[^'\n]'"),
+    parts = [("BLOCK", r"#~[\s\S]*?~#"), ("OPENBLOCK", r"#~"), ("COMMENT", r"//[^\n]*"), ("DEC", r"\d+\.\d+"), ("NUM", r"\d+"), ("STR", r'"[^"\n]*"'), ("CHR", r"'[^'\n]'"),
              ("ID", r"[A-Za-z_]\w*"), ("OP", "|".join(re.escape(o) for o in ops) + r"|[(){};]"),
              ("NL", r"\n"), ("SKIP", r"[ \t\r]+"), ("BAD", r".")]
     return re.compile("|".join(f"(?P<{n}>{rx})" for n, rx in parts))
@@ -31,6 +31,13 @@ def run(source: str, grammar: dict) -> dict:
         kind, text, col = m.lastgroup, m.group(), m.start() - line_start + 1
         if kind == "NL":
             line, line_start = line + 1, m.end()
+        elif kind == "BLOCK":                      # block comment: skip it but keep line numbers right
+            breaks = text.count("\n")
+            if breaks:
+                line, line_start = line + breaks, m.start() + text.rfind("\n") + 1
+        elif kind == "OPENBLOCK":
+            errors.append({"line": line, "col": col, "message": "unterminated block comment (missing '~#')"})
+            break
         elif kind in ("SKIP", "COMMENT"):
             continue
         elif kind == "BAD":

@@ -15,7 +15,7 @@ _DUMMY_HASH = hashlib.pbkdf2_hmac("sha256", b"dummy_password", bytes.fromhex(_DU
 
 # In-memory session validation cache to eliminate database lookups on repeated compiler requests
 _SESSION_CACHE: dict[str, tuple[dict, float]] = {}
-_SESSION_CACHE_TTL = 180.0  # 3 minutes
+_SESSION_CACHE_TTL = 60.0  # 1 minute (bounds how long a revoked token can linger on another instance)
 
 
 def invalidate_session_cache(token: str | None = None, user_id: int | None = None):

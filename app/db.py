@@ -230,7 +230,10 @@ def _get_pg_conn(db_url: str):
         try:
             if _cached_pg_conn.closed == 0:
                 _cached_pg_conn.rollback()
+                with _cached_pg_conn.cursor() as cur:
+                    cur.execute("SELECT 1")
                 return _cached_pg_conn
+            raise RuntimeError("connection closed")
         except Exception:
             try:
                 _cached_pg_conn.close()

@@ -50,6 +50,10 @@ def validate(g: dict) -> list[str]:
         values = [table.get(r) for r in roles]
         for dup in {v for v in values if values.count(v) > 1}:
             problems.append(f"'{dup}' is used more than once in {group}.")
+    for role, meaning in OPERATOR_ROLES.items():
+        word = g["operators"].get(role)
+        if isinstance(word, str) and any(m in word for m in ("//", "#~", "~#")):
+            problems.append(f"{meaning}: '{word}' clashes with comment markers (//, #~, ~#).")
     if not problems and set(g["keywords"].values()) & set(g["operators"].values()):
         problems.append("A keyword and an operator cannot be the same.")
     return problems
@@ -94,4 +98,6 @@ relop      -> '{o['GT']}' | '{o['LT']}' | '{o['EQ']}' | '{o['NE']}'
 arith      -> term {{ ('{o['ADD']}' | '{o['SUB']}') term }}
 term       -> factor {{ ('{o['MUL']}' | '{o['DIV']}') factor }}
 factor     -> NUM | DEC | STR | CHR | '{k['TRUE']}' | '{k['FALSE']}' | ID
-            | '(' expr ')' | '{o['NOT']}' factor"""
+            | '(' expr ')' | '{o['NOT']}' factor
+comment    -> '//' any text to end of line            (ignored by the compiler)
+            | '#~' any text, may span lines '~#'      (block comment, ignored)"""

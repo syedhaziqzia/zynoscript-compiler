@@ -65,6 +65,9 @@ async def restore_vercel_path(request: Request, call_next):
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["X-XSS-Protection"] = "1; mode=block"
     resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.scope["path"].startswith("/api"):
+        resp.headers["Cache-Control"] = "no-store"
     return resp
 
 
@@ -72,7 +75,7 @@ async def restore_vercel_path(request: Request, call_next):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
-    allow_credentials=True,
+    allow_credentials="*" not in CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )

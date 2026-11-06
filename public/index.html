@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=5.0">
+  <link rel="stylesheet" href="css/style.css?v=5.1">
     <script>
     if (!localStorage.getItem("zs_token") && !sessionStorage.getItem("zs_token")) {
       document.documentElement.classList.add("show-auth-immediately");
@@ -293,8 +293,25 @@
               <li>Variables can also be inferred from values: <code id="gd-decl2">let x := 5;</code></li>
               <li>Conditional statements support optional parentheses around conditions: <code>whenTrue x &lt;&lt;= y</code></li>
               <li>Single statements can be written with or without enclosing braces <code>{ }</code></li>
-              <li>Comments begin with <code>//</code> and are ignored by the compiler pipeline.</li>
+              <li>Single-line comments begin with <code>//</code> and run to the end of the line.</li>
+              <li>Block comments open with <code>#~</code> and close with <code>~#</code>; they may span several lines.</li>
+              <li>Comments are removed by the lexer, so they never affect tokens, the AST or the output.</li>
             </ul>
+          </div>
+        </section>
+
+        <section class="card-panel span-full">
+          <header class="card-header"><h3>Comments</h3></header>
+          <div class="card-body">
+            <pre class="code">// single-line comment: ignored until end of line
+let whole total := 10;   // trailing comment after code
+
+#~ block comment:
+   spans multiple lines
+   and closes with ~#
+beam total;
+halt;</pre>
+            <p class="muted text-small">Custom operators may not contain <code>//</code>, <code>#~</code> or <code>~#</code>, so comments always stay unambiguous.</p>
           </div>
         </section>
 
@@ -488,9 +505,9 @@
   <div id="toast" class="toast" role="status" hidden></div>
 
   <!-- Scripts -->
-  <script src="js/icons.js?v=5.0"></script>
-  <script src="js/samples.js?v=5.0"></script>
-  <script src="js/api.js?v=5.0"></script>
-  <script src="js/app.js?v=5.0"></script>
+  <script src="js/icons.js?v=5.1"></script>
+  <script src="js/samples.js?v=5.1"></script>
+  <script src="js/api.js?v=5.1"></script>
+  <script src="js/app.js?v=5.1"></script>
 </body>
 </html>

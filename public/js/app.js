@@ -89,10 +89,10 @@ function zsRunLexical(source, grammar) {
   const opRole = {};
   for (const [r, w] of Object.entries(grammar.operators)) opRole[w] = r;
 
-  const ops = Object.values(grammar.operators).slice().sort((a, b) => b.length - a.length);
+  const ops = Object.values(grammar.operators).filter((o) => typeof o === "string" && o.length > 0).sort((a, b) => b.length - a.length);
   const opPattern = ops.map(zsEscRegex).join("|") + "|[(){};]";
   const masterRx = new RegExp(
-    `(?<COMMENT>\\/\\/[^\\n]*)|(?<DEC>\\d+\\.\\d+)|(?<NUM>\\d+)|(?<STR>"[^"\\n]*")|(?<CHR>'[^'\\n]')|(?<ID>[A-Za-z_]\\w*)|(?<OP>${opPattern})|(?<NL>\\n)|(?<SKIP>[ \\t\\r]+)|(?<BAD>.)`,
+    `(?<BLOCK>#~[\\s\\S]*?~#)|(?<OPENBLOCK>#~)|(?<COMMENT>\\/\\/[^\\n]*)|(?<DEC>\\d+\\.\\d+)|(?<NUM>\\d+)|(?<STR>"[^"\\n]*")|(?<CHR>'[^'\\n]')|(?<ID>[A-Za-z_]\\w*)|(?<OP>${opPattern})|(?<NL>\\n)|(?<SKIP>[ \\t\\r]+)|(?<BAD>.)`,
     "g"
   );
 
@@ -102,14 +102,24 @@ function zsRunLexical(source, grammar) {
   while ((m = masterRx.exec(source)) !== null) {
     const groups = m.groups;
     let kind = null;
-    for (const k of ["COMMENT", "DEC", "NUM", "STR", "CHR", "ID", "OP", "NL", "SKIP", "BAD"]) {
+    for (const k of ["BLOCK", "OPENBLOCK", "COMMENT", "DEC", "NUM", "STR", "CHR", "ID", "OP", "NL", "SKIP", "BAD"]) {
       if (groups[k] !== undefined) { kind = k; break; }
     }
     const text = m[0];
+    if (text.length === 0) { masterRx.lastIndex += 1; continue; } // safety: never loop on an empty match
     const col = m.index - lineStart + 1;
     if (kind === "NL") {
       line += 1;
       lineStart = m.index + text.length;
+    } else if (kind === "BLOCK") {
+      const breaks = (text.match(/\n/g) || []).length;
+      if (breaks) {
+        line += breaks;
+        lineStart = m.index + text.lastIndexOf("\n") + 1;
+      }
+    } else if (kind === "OPENBLOCK") {
+      errors.push({ line, col, message: "unterminated block comment (missing '~#')" });
+      break;
     } else if (kind === "SKIP" || kind === "COMMENT") {
       continue;
     } else if (kind === "BAD") {
@@ -1034,7 +1044,7 @@ async function enterApp(user) {
       Api.get("/api/grammar"),
       isAdmin ? fillUserFilter().catch(() => {}) : Promise.resolve()
     ]);
-    if (gram) setGrammar(gram);
+    if (gram) setGrammar(gram, true);
   } catch (err) {
     console.warn("Background grammar load:", err);
   }
@@ -1910,9 +1920,12 @@ window.addEventListener("keydown", (e) => {
 });
 
 /* ---------- Language Grammar Panel ---------- */
-function setGrammar(data) {
+function setGrammar(data, preserveDirtyDraft = false) {
   state.grammar = data;
-  state.draft = JSON.parse(JSON.stringify(data.grammar));
+  if (!preserveDirtyDraft || !state.grammarDraftDirty) {
+    state.draft = JSON.parse(JSON.stringify(data.grammar));
+    state.grammarDraftDirty = false;
+  }
   renderGrammar();
 }
 
@@ -1928,7 +1941,7 @@ function renderGrammar() {
       </div>
       <pre class="code bnf-code-view">${esc(state.grammar.bnf)}</pre>
       <div class="grammar-rules-footer">
-        <p class="muted text-small">Every statement ends with a semicolon <code>;</code>. Programs terminate with <code>halt;</code>.</p>
+        <p class="muted text-small">Every statement ends with a semicolon <code>;</code>. Programs terminate with <code>halt;</code>. Comments: <code>// line</code> and <code>#~ block ~#</code> are ignored by the compiler.</p>
       </div>`;
     const btnCopy = $("#btn-copy-bnf");
     if (btnCopy) {
@@ -1967,6 +1980,7 @@ function renderGrammar() {
   body.innerHTML = `${groupsHtml}<div id="grammar-problems"></div>`;
   $$("input[data-role]", body).forEach((i) => i.addEventListener("input", () => {
     state.draft[tab][i.dataset.role] = i.value.trim();
+    state.grammarDraftDirty = true;
     $("#grammar-msg").textContent = "Unsaved changes";
   }));
 }
@@ -1982,6 +1996,7 @@ $("#grammar-save").addEventListener("click", async () => {
       keywords: state.draft.keywords,
       operators: state.draft.operators
     }));
+    state.grammarDraftDirty = false;
     $("#grammar-msg").textContent = "Saved. Engines now use updated grammar.";
     toast("Grammar updated successfully");
     compileCache.clear();
@@ -1994,6 +2009,7 @@ $("#grammar-save").addEventListener("click", async () => {
 $("#grammar-reset").addEventListener("click", async () => {
   try {
     setGrammar(await Api.post("/api/grammar/reset"));
+    state.grammarDraftDirty = false;
     $("#grammar-msg").textContent = "Reset to default ZynoScript grammar.";
     compileCache.clear();
     toast("Grammar reset to default");
@@ -2074,7 +2090,8 @@ async function runStage(stage) {
   const runAllBtn = $("#run-all");
   if (runBtn) runBtn.classList.add("is-running");
   if (runAllBtn) runAllBtn.classList.add("is-running");
-  const cacheKey = `${stage}::${code.value}`;
+  const activeGrammarObj = (state.grammar && state.grammar.grammar) ? state.grammar.grammar : ZS_DEFAULT_GRAMMAR;
+  const cacheKey = `${stage}::${JSON.stringify(activeGrammarObj)}::${code.value}`;
   if (compileCache.has(cacheKey)) {
     const cachedRes = compileCache.get(cacheKey);
     state.lastResults = cachedRes;
@@ -2096,9 +2113,7 @@ async function runStage(stage) {
       state.lastResults = res;
       STAGES.forEach((s, i) => setState(s, i > upto ? "idle" : res.results[s] ? (res.results[s].ok ? "ok" : "errors") : "blocked"));
       renderOutput(stage, res);
-      Api.post(`/api/compile/${stage}`, { source: code.value }).catch((err) => {
-        if (err && err.status === 401) leaveApp(err.message);
-      });
+      Api.post(`/api/compile/${stage}`, { source: code.value }).catch(() => {});
       return;
     }
     const res = await Api.post(`/api/compile/${stage}`, { source: code.value });
@@ -2542,7 +2557,7 @@ function renderUsersTable() {
           ${u.has_custom_grammar ? `<button class="btn small ghost" data-act="reset-grammar" data-id="${u.id}" data-name="${esc(u.username)}" title="Reset user grammar to default">Reset Grammar</button>` : ""}
           <button class="btn small" data-act="password" data-id="${u.id}" data-name="${esc(u.username)}">Reset Pwd</button>
           ${me ? "" : `
-            <button class="btn small" data-act="role" data-id="${u.id}" data-name="${esc(u.username)}" data-role="${u.role === "admin" ? "user" : "admin"}">Make ${u.role === "admin" ? "user" : "admin"}</button>
+            <button class="btn small" data-act="role" data-id="${u.id}" data-name="${esc(u.username)}" data-target-role="${u.role === "admin" ? "user" : "admin"}">Make ${u.role === "admin" ? "user" : "admin"}</button>
             <button class="btn small danger" data-act="delete" data-id="${u.id}" data-name="${esc(u.username)}">Delete</button>
           `}
         </div>
@@ -2571,7 +2586,8 @@ async function loadAdminDashboard() {
 $("#users-body").addEventListener("click", async (e) => {
   const b = e.target.closest("button[data-act]");
   if (!b) return;
-  const { act, id, name, role } = b.dataset;
+  const { act, id, name } = b.dataset;
+  const role = b.dataset.targetRole || b.dataset.role;
   try {
     if (act === "view-logs") {
       showView("activity");
@@ -2766,6 +2782,21 @@ function getCommands() {
         resetStates();
         showView("workbench");
         toast('Loaded "Working program"');
+      },
+    },
+    {
+      id: "sample-comments",
+      group: "Sample Programs",
+      name: "Load Comments Guide Sample",
+      desc: "Demonstrates single-line (//) and multi-line (#~ ... ~#) comments",
+      icon: "file",
+      action: () => {
+        sample.value = "Comments guide";
+        code.value = SAMPLES[sample.value];
+        updateGutter();
+        resetStates();
+        showView("workbench");
+        toast('Loaded "Comments guide"');
       },
     },
     {

@@ -4,7 +4,7 @@ import sqlite3
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from .. import logs
+from .. import logs, ratelimit
 from ..auth import (
     bearer_token,
     create_session,
@@ -18,6 +18,8 @@ from ..auth import (
 )
 from ..config import (
     DEFAULT_ADMIN_USERNAME,
+    LOGIN_MAX_FAILURES,
+    LOGIN_WINDOW_SECONDS,
     PASSWORD_MIN_LEN,
     REMEMBER_DAYS,
     SESSION_HOURS,
@@ -67,6 +69,9 @@ def register(body: Credentials):
 
 @router.post("/login")
 def login(body: Credentials):
+    throttle_key = f"login-fail:{body.username.lower()}"
+    if ratelimit.blocked(throttle_key, LOGIN_MAX_FAILURES, LOGIN_WINDOW_SECONDS):
+        raise HTTPException(429, f"Too many failed sign-in attempts for '{body.username}'. Wait a few minutes and try again.")
     with connect() as conn:
         row = conn.execute("SELECT id, username, role, password_hash, salt FROM users WHERE username = ?",
                            (body.username,)).fetchone()
@@ -82,6 +87,7 @@ def login(body: Credentials):
             }
         )
     if not verify_password(body.password, row["salt"], row["password_hash"]):
+        ratelimit.hit(throttle_key, LOGIN_MAX_FAILURES, LOGIN_WINDOW_SECONDS)
         logs.record(None, "login", "error", "wrong password", username=body.username)
         raise HTTPException(
             status_code=401,

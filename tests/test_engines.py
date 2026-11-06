@@ -28,6 +28,25 @@ class EngineTests(unittest.TestCase):
         self.assertTrue(r["ok"])
         self.assertEqual([t["lexeme"] for t in r["tokens"]], ["let", "whole", "a", ":=", "1", ";", "beam", "a", ";"])
 
+    def test_lexer_block_comments_and_line_tracking(self):
+        src = "#~ multi-line\n   block comment ~#\nlet whole x := 10;\nbeam x;\nhalt;"
+        r = lexical.run(src, G)
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["tokens"][0]["lexeme"], "let")
+        self.assertEqual(r["tokens"][0]["line"], 3)
+
+    def test_lexer_unterminated_block_comment_reported(self):
+        r = lexical.run("let whole a := 1;\n#~ unclosed comment\nbeam a;", G)
+        self.assertFalse(r["ok"])
+        self.assertEqual(r["errors"][0]["line"], 2)
+        self.assertIn("unterminated block comment", r["errors"][0]["message"])
+
+    def test_grammar_rejects_comment_marker_collision(self):
+        bad = grammar.default()
+        bad["operators"]["DIV"] = "//"
+        problems = grammar.validate(bad)
+        self.assertTrue(any("clashes with comment markers" in p for p in problems))
+
     def test_lexer_line_and_category_tables(self):
         r = lexical.run("let whole a := 1;\nbeam a;", G)
         self.assertEqual(len(r["lines"]), 2)
