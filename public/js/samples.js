@@ -71,4 +71,51 @@ beam evens;
 beam odds;
 halt;
 `,
+  "Factorial calculation": `let whole n := 5;
+let whole fact := 1;
+spin (n =>> 1) {
+    fact := fact *~ n;
+    n := n -~ 1;
+}
+beam "Factorial of 5:";
+beam fact;
+halt;
+`,
+  "Fibonacci sequence": `let whole steps := 6;
+let whole a := 0;
+let whole b := 1;
+let whole nextVal := 0;
+let whole count := 0;
+beam "Fibonacci numbers:";
+spin (count <<= steps) {
+    beam a;
+    nextVal := a +~ b;
+    a := b;
+    b := nextVal;
+    count := count +~ 1;
+}
+halt;
+`,
+  "Find maximum of 3": `let whole x := 42;
+let whole y := 99;
+let whole z := 73;
+let whole maxVal := x;
+whenTrue (y =>> maxVal) {
+    maxVal := y;
+}
+whenTrue (z =>> maxVal) {
+    maxVal := z;
+}
+beam "Maximum value:";
+beam maxVal;
+halt;
+`,
+  "Temperature converter": `let part celsius := 25.0;
+let part fahrenheit := (celsius *~ 9.0 /~ 5.0) +~ 32.0;
+beam "Celsius:";
+beam celsius;
+beam "Fahrenheit:";
+beam fahrenheit;
+halt;
+`,
 };

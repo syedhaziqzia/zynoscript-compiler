@@ -2028,6 +2028,66 @@ function getCommands() {
       },
     },
     {
+      id: "sample-factorial",
+      group: "Sample Programs",
+      name: "Load Factorial Calculation Sample",
+      desc: "Calculates 5! (factorial of 5) using an iterative loop",
+      icon: "file",
+      action: () => {
+        sample.value = "Factorial calculation";
+        code.value = SAMPLES[sample.value];
+        updateGutter();
+        resetStates();
+        showView("workbench");
+        toast('Loaded "Factorial calculation"');
+      },
+    },
+    {
+      id: "sample-fibonacci",
+      group: "Sample Programs",
+      name: "Load Fibonacci Sequence Sample",
+      desc: "Generates the Fibonacci series using a while loop",
+      icon: "file",
+      action: () => {
+        sample.value = "Fibonacci sequence";
+        code.value = SAMPLES[sample.value];
+        updateGutter();
+        resetStates();
+        showView("workbench");
+        toast('Loaded "Fibonacci sequence"');
+      },
+    },
+    {
+      id: "sample-max3",
+      group: "Sample Programs",
+      name: "Load Find Maximum of 3 Numbers Sample",
+      desc: "Finds the largest value among three variables using conditionals",
+      icon: "file",
+      action: () => {
+        sample.value = "Find maximum of 3";
+        code.value = SAMPLES[sample.value];
+        updateGutter();
+        resetStates();
+        showView("workbench");
+        toast('Loaded "Find maximum of 3"');
+      },
+    },
+    {
+      id: "sample-temp",
+      group: "Sample Programs",
+      name: "Load Temperature Converter Sample",
+      desc: "Converts Celsius to Fahrenheit with float arithmetic",
+      icon: "file",
+      action: () => {
+        sample.value = "Temperature converter";
+        code.value = SAMPLES[sample.value];
+        updateGutter();
+        resetStates();
+        showView("workbench");
+        toast('Loaded "Temperature converter"');
+      },
+    },
+    {
       id: "sample-semantic-errors",
       group: "Sample Programs",
       name: "Load Semantic Errors Test",
