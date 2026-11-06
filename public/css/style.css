@@ -1487,12 +1487,13 @@ pre.code {
   margin-bottom: 12px;
 }
 
-/* Errors List */
+/* Errors List (Clean Developer Diagnostic Rows — No AI Left-Border Callout) */
 .errors {
   list-style: none;
-  margin: 0 0 14px;
+  margin: 0 0 16px;
   padding: 0;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
@@ -1500,27 +1501,70 @@ pre.code {
   width: 100%;
   text-align: left;
   display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 8px 12px;
-  border: 1px solid var(--bad-border);
-  border-left: 3px solid var(--bad);
-  background: var(--bad-bg);
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  background: var(--bg-subtle);
   color: var(--ink);
-  border-radius: var(--r-sm);
+  border-radius: 8px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .errors button:hover {
-  transform: translateX(2px);
-  border-color: var(--bad);
+  border-color: var(--line-strong);
+  background: var(--bg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.errors .err-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.errors .err-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--bad);
+  flex-shrink: 0;
 }
 
 .errors .where {
-  font: 600 11.5px var(--font-mono);
+  font: 600 11px var(--font-mono);
   color: var(--bad);
+  background: var(--bad-bg);
+  border: 1px solid var(--bad-border);
+  padding: 2px 7px;
+  border-radius: 5px;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.errors .err-msg {
+  font: 500 12.5px/1.4 var(--font-mono);
+  color: var(--ink);
+  word-break: break-word;
+}
+
+.errors .err-jump {
+  font: 600 11px var(--font-mono);
+  color: var(--ink-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.errors button:hover .err-jump {
+  opacity: 1;
+  color: var(--ink);
+  transform: translateX(2px);
 }
 
 /* Tables: Soft Spatial Grouping (Idea 3) */
@@ -3192,28 +3236,34 @@ dialog.dlg-grammar .dlg-grammar-body {
    INLINE ERROR MARKERS & SUBTLE ANIMATIONS
    ========================================= */
 
-/* 1. Topbar Icon Pill Buttons (? Shortcuts & Dark Mode) */
+/* 1. Topbar Icon Buttons (Keyboard Shortcuts & Light/Dark Theme) */
+.topbar-icon-btn,
 .icon-pill-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--r-full);
+  width: 30px;
+  height: 28px;
+  border-radius: 8px;
   border: 1px solid var(--line);
-  background: var(--bg-subtle);
+  background: var(--bg-muted);
   color: var(--ink-secondary);
-  font: 700 13px var(--font-mono);
   cursor: pointer;
   transition: var(--transition);
   padding: 0;
   flex-shrink: 0;
 }
 
+.topbar-icon-btn[hidden],
+.icon-pill-btn[hidden] {
+  display: none !important;
+}
+
+.topbar-icon-btn:hover,
 .icon-pill-btn:hover {
   border-color: var(--ink);
   color: var(--ink);
-  background: var(--bg);
+  background: var(--bg-subtle);
 }
 
 /* 2. Live Syntax Highlighting Editor Backdrop & Overlay */
@@ -3276,9 +3326,7 @@ dialog.dlg-grammar .dlg-grammar-body {
 .hl-err-line {
   display: inline-block;
   min-width: 100%;
-  background: rgba(239, 68, 68, 0.16);
-  text-decoration: wavy underline rgba(239, 68, 68, 0.85);
-  text-underline-offset: 3px;
+  background: rgba(239, 68, 68, 0.14);
   border-radius: 3px;
 }
 
@@ -3287,37 +3335,29 @@ dialog.dlg-grammar .dlg-grammar-body {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  padding: 14px 6px 14px 8px;
-  min-width: 46px;
+  padding: 14px 8px 14px 10px;
+  min-width: 44px;
 }
 
 .gutter-line {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 4px;
   line-height: 1.65;
-  padding: 0 4px;
+  padding: 0 5px;
   border-radius: 4px;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .gutter-line.is-error {
-  color: #fecaca;
-  background: rgba(239, 68, 68, 0.25);
-  font-weight: 700;
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.22);
+  font-weight: 600;
   cursor: pointer;
 }
 
-.gutter-line.is-error::before {
-  content: "●";
-  color: #ef4444;
-  font-size: 8px;
-  line-height: 1;
-}
-
 .gutter-line.is-error:hover {
-  background: rgba(239, 68, 68, 0.38);
+  background: rgba(239, 68, 68, 0.34);
 }
 
 /* 4. Desktop Resizable Split Between Editor and Inspector */
@@ -3587,8 +3627,13 @@ html[data-theme="dark"] {
 }
 
 html[data-theme="dark"] .topbar {
-  background: rgba(17, 19, 24, 0.88);
+  background: rgba(17, 19, 24, 0.92);
   border-bottom-color: var(--line);
+}
+
+html[data-theme="dark"] .brand img,
+html[data-theme="dark"] .hero-logo {
+  filter: invert(1) brightness(1.8);
 }
 
 html[data-theme="dark"] .studio-pane,
@@ -3604,18 +3649,39 @@ html[data-theme="dark"] .drawer-header,
 html[data-theme="dark"] .drawer-footer,
 html[data-theme="dark"] .grammar-card,
 html[data-theme="dark"] .custom-select-menu,
-html[data-theme="dark"] .profile-dropdown {
+html[data-theme="dark"] .profile-dropdown,
+html[data-theme="dark"] .tbl-wrap,
+html[data-theme="dark"] dialog {
   background: var(--bg);
   border-color: var(--line);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .tbl th {
+  background: var(--bg-subtle);
+  border-bottom-color: var(--line);
+  color: var(--ink-secondary);
+}
+
+html[data-theme="dark"] .tbl td {
+  border-bottom-color: var(--line-subtle);
+  color: var(--ink);
+}
+
+html[data-theme="dark"] .tbl tbody tr:hover,
+html[data-theme="dark"] .feed-item:hover {
+  background: var(--bg-subtle);
 }
 
 html[data-theme="dark"] .subtab-btn.is-active,
 html[data-theme="dark"] .seg .tab.is-active,
 html[data-theme="dark"] .grammar-card-input:hover,
-html[data-theme="dark"] .grammar-card-input:focus {
+html[data-theme="dark"] .grammar-card-input:focus,
+html[data-theme="dark"] .admin-search-input:focus {
   background: var(--bg-subtle);
   color: var(--ink);
 }
+
 
 
 

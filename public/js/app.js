@@ -1145,6 +1145,7 @@ async function enterApp(user) {
   if (topbar) topbar.hidden = false;
   $("#nav").hidden = $("#whoami").hidden = $("#cmd-trigger").hidden = false;
   if ($("#btn-shortcuts-help")) $("#btn-shortcuts-help").hidden = false;
+  if ($("#btn-theme-toggle")) $("#btn-theme-toggle").hidden = false;
   $("#nav-admin").hidden = $("#log-user").hidden = !isAdmin;
 
   // Immediately render workbench so refresh and login feel instantaneous
@@ -1170,6 +1171,7 @@ function leaveApp(message) {
   if (topbar) topbar.hidden = true;
   $("#nav").hidden = $("#whoami").hidden = $("#cmd-trigger").hidden = true;
   if ($("#btn-shortcuts-help")) $("#btn-shortcuts-help").hidden = true;
+  if ($("#btn-theme-toggle")) $("#btn-theme-toggle").hidden = true;
   $("#nav-admin").hidden = $("#log-user").hidden = true;
   toggleProfileDropdown(false);
   closeGrammarDrawer();
@@ -2477,7 +2479,10 @@ $("#run-all").addEventListener("click", () => runStage("output"));
 
 /* ---------- Output Inspector Rendering ---------- */
 const errorList = (errs) => !errs.length ? "" : `<ul class="errors">${errs.map((e, i) =>
-  `<li style="--i:${i}"><button type="button" data-line="${e.line}"><span class="where">Line ${e.line}${e.col ? ":" + e.col : ""}${e.rule ? " · Rule " + e.rule : ""}</span><span>${esc(e.message)}</span></button></li>`).join("")}</ul>`;
+  `<li style="--i:${i}"><button type="button" data-line="${e.line}">` +
+  `<span class="err-left"><span class="err-dot" aria-hidden="true"></span><span class="where">Line ${e.line}${e.col ? ":" + e.col : ""}${e.rule ? " · Rule " + e.rule : ""}</span><span class="err-msg">${esc(e.message)}</span></span>` +
+  `<span class="err-jump" aria-hidden="true">Jump &rarr;</span>` +
+  `</button></li>`).join("")}</ul>`;
 
 const okBanner = (text) => `<div class="success">${icon("check")}<span>${text}</span></div>`;
 
@@ -3403,6 +3408,23 @@ function getCommands() {
       },
     },
     {
+      id: "tool-theme",
+      group: "Tools",
+      name: "Toggle Light / Dark Theme",
+      desc: "Switch the studio workbench between light and dark appearance",
+      icon: document.documentElement.getAttribute("data-theme") === "dark" ? "sun" : "moon",
+      action: () => toggleStudioTheme(),
+    },
+    {
+      id: "tool-shortcuts",
+      group: "Tools",
+      name: "Keyboard Shortcuts Reference",
+      desc: "View all studio and editor keyboard shortcuts",
+      icon: "keyboard",
+      shortcut: "?",
+      action: () => openShortcutsDialog(),
+    },
+    {
       id: "auth-logout",
       group: "Account",
       name: "Sign Out",
@@ -3546,4 +3568,139 @@ if (cmdPalette && cmdInput) {
     executeActiveCommand();
   });
 }
+
+/* =========================================
+   THEME TOGGLE, KEYBOARD SHORTCUTS MODAL,
+   RESIZABLE SPLIT & MOBILE WORKBENCH TABS
+   ========================================= */
+const btnThemeToggle = $("#btn-theme-toggle");
+const btnShortcutsHelp = $("#btn-shortcuts-help");
+const dlgShortcuts = $("#dlg-shortcuts");
+
+function syncThemeToggleIcon() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const iconEl = $("#theme-icon");
+  if (iconEl) {
+    iconEl.dataset.icon = isDark ? "sun" : "moon";
+    if (typeof hydrateIcons === "function") hydrateIcons(btnThemeToggle || document);
+    else if (typeof icon === "function") iconEl.innerHTML = icon(isDark ? "sun" : "moon");
+  }
+  if (btnThemeToggle) {
+    btnThemeToggle.title = isDark ? "Switch to Light Mode" : "Switch to Dark Mode";
+    btnThemeToggle.setAttribute("aria-pressed", String(isDark));
+  }
+}
+
+function toggleStudioTheme() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  if (next === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  try {
+    localStorage.setItem("zs_theme", next);
+  } catch {}
+  syncThemeToggleIcon();
+  toast(next === "dark" ? "Dark mode enabled" : "Light mode enabled");
+}
+
+function openShortcutsDialog() {
+  if (!dlgShortcuts) return;
+  if (typeof dlgShortcuts.showModal === "function" && !dlgShortcuts.open) {
+    dlgShortcuts.showModal();
+  }
+}
+
+syncThemeToggleIcon();
+
+if (btnThemeToggle) {
+  btnThemeToggle.addEventListener("click", () => toggleStudioTheme());
+}
+
+if (btnShortcutsHelp && dlgShortcuts) {
+  btnShortcutsHelp.addEventListener("click", () => openShortcutsDialog());
+  dlgShortcuts.addEventListener("click", (e) => {
+    if (e.target === dlgShortcuts) dlgShortcuts.close();
+  });
+}
+
+window.addEventListener("keydown", (e) => {
+  if (!state.user) return;
+  const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : "";
+  const isEditable = tag === "input" || tag === "textarea" || tag === "select" || (e.target && e.target.isContentEditable);
+  if (!isEditable && e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    e.preventDefault();
+    if (dlgShortcuts && dlgShortcuts.open) dlgShortcuts.close();
+    else openShortcutsDialog();
+  }
+});
+
+// Desktop Resizable Split Between Editor and Inspector
+const studioResizer = $("#studio-resizer");
+const studioGrid = $("#studio-grid");
+if (studioResizer && studioGrid) {
+  let dragging = false;
+  studioResizer.addEventListener("mousedown", (e) => {
+    if (window.innerWidth <= 960) return;
+    dragging = true;
+    studioResizer.classList.add("is-dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  });
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const rect = studioGrid.getBoundingClientRect();
+    const relX = e.clientX - rect.left;
+    const pct = Math.max(28, Math.min(72, (relX / rect.width) * 100));
+    studioGrid.style.setProperty("--editor-col", `${pct}fr`);
+    studioGrid.style.setProperty("--inspector-col", `${100 - pct}fr`);
+  });
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    studioResizer.classList.remove("is-dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  });
+  studioResizer.addEventListener("dblclick", () => {
+    studioGrid.style.removeProperty("--editor-col");
+    studioGrid.style.removeProperty("--inspector-col");
+  });
+}
+
+// Mobile Workbench Tabs (Code Editor vs Compiler Output + Quick Run)
+const mobTabsWrap = $("#mobile-workbench-tabs");
+const mobFabRun = $("#mob-fab-run");
+if (mobTabsWrap && studioGrid) {
+  $$(".mob-wb-tab", mobTabsWrap).forEach((tabBtn) => {
+    tabBtn.addEventListener("click", () => {
+      const target = tabBtn.dataset.mobPane;
+      studioGrid.dataset.mobilePane = target;
+      $$(".mob-wb-tab", mobTabsWrap).forEach((b) => {
+        const active = b.dataset.mobPane === target;
+        b.classList.toggle("is-active", active);
+        b.setAttribute("aria-selected", String(active));
+      });
+    });
+  });
+}
+if (mobFabRun) {
+  mobFabRun.addEventListener("click", () => {
+    if (studioGrid) {
+      studioGrid.dataset.mobilePane = "inspector";
+      if (mobTabsWrap) {
+        $$(".mob-wb-tab", mobTabsWrap).forEach((b) => {
+          const active = b.dataset.mobPane === "inspector";
+          b.classList.toggle("is-active", active);
+          b.setAttribute("aria-selected", String(active));
+        });
+      }
+    }
+    runStage("output");
+  });
+}
+
 
