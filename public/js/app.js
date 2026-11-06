@@ -31,12 +31,671 @@ const GRAMMAR_GROUPS = {
   ],
 };
 
+/* 1-to-1 Client-Side ZynoScript Compiler Engine (Mirrors app/engines/*.py) */
+const ZS_DELIMITERS = { "(": "LPAREN", ")": "RPAREN", "{": "LBRACE", "}": "RBRACE", ";": "SEMI" };
+const ZS_TYPE_OF_ROLE = { INT: "int", FLOAT: "float", STRING: "string", BOOL: "bool", CHAR: "char" };
+const ZS_DEFAULT_GRAMMAR = {
+  name: "ZynoScript",
+  keywords: {
+    LET: "let", PRINT: "beam", IF: "whenTrue", ELSE: "elseWay", WHILE: "spin", HALT: "halt",
+    INT: "whole", FLOAT: "part", STRING: "phrase", BOOL: "flag", CHAR: "mark",
+    TRUE: "true", FALSE: "false"
+  },
+  operators: {
+    ASSIGN: ":=", ADD: "+~", SUB: "-~", MUL: "*~", DIV: "/~",
+    GT: "=>>", LT: "<<=", EQ: "~=", NE: "~!", AND: "&&~", OR: "||~", NOT: "!~"
+  }
+};
+const ZS_CATEGORY = {
+  ID: "Identifier", NUM: "Integer Constant", DEC: "Float Constant", STR: "String Constant",
+  CHR: "Character Constant", TRUE: "Boolean Constant", FALSE: "Boolean Constant",
+  ASSIGN: "Assignment Operator", ADD: "Addition Operator", SUB: "Subtraction Operator",
+  MUL: "Multiplication Operator", DIV: "Division Operator", GT: "Greater Than Operator",
+  LT: "Less Than Operator", EQ: "Equal Comparison Operator", NE: "Not Equal Comparison Operator",
+  AND: "Logical AND Operator", OR: "Logical OR Operator", NOT: "Logical NOT Operator",
+  LPAREN: "Left Parenthesis", RPAREN: "Right Parenthesis", LBRACE: "Left Brace",
+  RBRACE: "Right Brace", SEMI: "Semicolon"
+};
+const ZS_REL_ROLES = ["GT", "LT", "EQ", "NE"];
+const ZS_LITERALS = { NUM: "int", DEC: "float", STR: "string", CHR: "char", TRUE: "bool", FALSE: "bool" };
+const ZS_NUMERIC = ["int", "float"];
+const ZS_ARITH = ["ADD", "SUB", "MUL", "DIV"];
+const ZS_COMPARE = ["GT", "LT"];
+const ZS_LOGIC = ["AND", "OR"];
+
+function zsLexeme(g, role) {
+  if (g.keywords && role in g.keywords) return g.keywords[role];
+  if (g.operators && role in g.operators) return g.operators[role];
+  for (const [ch, r] of Object.entries(ZS_DELIMITERS)) {
+    if (r === role) return ch;
+  }
+  return role;
+}
+
+function zsTypeLabel(g, canonical) {
+  for (const [r, t] of Object.entries(ZS_TYPE_OF_ROLE)) {
+    if (t === canonical) return g.keywords[r];
+  }
+  return canonical;
+}
+
+function zsEscRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\const compileCache = new Map();");
+}
+
+function zsRunLexical(source, grammar) {
+  const wordRole = {};
+  for (const [r, w] of Object.entries(grammar.keywords)) wordRole[w] = r;
+  const opRole = {};
+  for (const [r, w] of Object.entries(grammar.operators)) opRole[w] = r;
+
+  const ops = Object.values(grammar.operators).slice().sort((a, b) => b.length - a.length);
+  const opPattern = ops.map(zsEscRegex).join("|") + "|[(){};]";
+  const masterRx = new RegExp(
+    `(?<COMMENT>\\/\\/[^\\n]*)|(?<DEC>\\d+\\.\\d+)|(?<NUM>\\d+)|(?<STR>"[^"\\n]*")|(?<CHR>'[^'\\n]')|(?<ID>[A-Za-z_]\\w*)|(?<OP>${opPattern})|(?<NL>\\n)|(?<SKIP>[ \\t\\r]+)|(?<BAD>.)`,
+    "g"
+  );
+
+  const tokens = [], errors = [];
+  let line = 1, lineStart = 0;
+  let m;
+  while ((m = masterRx.exec(source)) !== null) {
+    const groups = m.groups;
+    let kind = null;
+    for (const k of ["COMMENT", "DEC", "NUM", "STR", "CHR", "ID", "OP", "NL", "SKIP", "BAD"]) {
+      if (groups[k] !== undefined) { kind = k; break; }
+    }
+    const text = m[0];
+    const col = m.index - lineStart + 1;
+    if (kind === "NL") {
+      line += 1;
+      lineStart = m.index + text.length;
+    } else if (kind === "SKIP" || kind === "COMMENT") {
+      continue;
+    } else if (kind === "BAD") {
+      const what = text === '"' ? "unterminated string literal" : text === "'" ? "invalid character literal" : `unknown character '${text}'`;
+      errors.push({ line, col, message: what });
+    } else {
+      let category;
+      if (kind === "ID" && text in wordRole) {
+        const role = wordRole[text];
+        kind = role;
+        category = ZS_CATEGORY[role] || "Keyword";
+      } else if (kind === "OP") {
+        kind = ZS_DELIMITERS[text] || opRole[text];
+        category = ZS_CATEGORY[kind];
+      } else {
+        category = ZS_CATEGORY[kind];
+      }
+      tokens.push({ line, col, lexeme: text, kind, category });
+    }
+  }
+
+  const summary = {}, ids = {}, cats = {};
+  for (const t of tokens) {
+    summary[t.category] = (summary[t.category] || 0) + 1;
+    if (!cats[t.category]) cats[t.category] = { category: t.category, count: 0, lexemes: [] };
+    cats[t.category].count += 1;
+    if (!cats[t.category].lexemes.includes(t.lexeme)) cats[t.category].lexemes.push(t.lexeme);
+    if (t.kind === "ID") {
+      if (!ids[t.lexeme]) ids[t.lexeme] = { name: t.lexeme, first_line: t.line, count: 0 };
+      ids[t.lexeme].count += 1;
+    }
+  }
+
+  const srcLines = source.split("\n");
+  const perLine = srcLines.map((text, idx) => ({ line: idx + 1, text, tokens: [] }));
+  for (const t of tokens) {
+    if (perLine[t.line - 1]) {
+      perLine[t.line - 1].tokens.push({ lexeme: t.lexeme, category: t.category });
+    }
+  }
+
+  return {
+    stage: "lexical",
+    ok: errors.length === 0,
+    tokens,
+    errors,
+    summary,
+    identifiers: Object.values(ids),
+    count: tokens.length,
+    lines: perLine,
+    categories: Object.values(cats)
+  };
+}
+
+function zsTreeText(nodes, depth = 0) {
+  const out = [];
+  const pad = "  ".repeat(depth);
+  const list = Array.isArray(nodes) ? nodes : [nodes];
+  for (const n of list) {
+    const k = n.node;
+    if (k === "decl") {
+      out.push(`${pad}Declaration: ${n.type === "auto" ? "(inferred)" : n.type} ${n.name}`);
+      if (n.init) out.push(...zsTreeText(n.init, depth + 1));
+    } else if (k === "assign") {
+      out.push(`${pad}Assignment: ${n.name}`);
+      out.push(...zsTreeText(n.value, depth + 1));
+    } else if (k === "print") {
+      out.push(`${pad}Print`);
+      out.push(...zsTreeText(n.value, depth + 1));
+    } else if (k === "if" || k === "while") {
+      out.push(`${pad}${k === "if" ? "If" : "While"}`);
+      out.push(`${pad}  Condition`);
+      out.push(...zsTreeText(n.cond, depth + 2));
+      out.push(`${pad}  ${k === "if" ? "Then" : "Body"}`);
+      out.push(...zsTreeText(k === "if" ? n.then : n.body, depth + 2));
+      if (k === "if" && n.else !== null) {
+        out.push(`${pad}  Else`);
+        out.push(...zsTreeText(n.else, depth + 2));
+      }
+    } else if (k === "bin") {
+      out.push(`${pad}Operator: ${n.sym}`);
+      out.push(...zsTreeText([n.left, n.right], depth + 1));
+    } else if (k === "un") {
+      out.push(`${pad}Operator: ${n.sym}`);
+      out.push(...zsTreeText(n.operand, depth + 1));
+    } else if (k === "lit") {
+      out.push(`${pad}Literal (${n.type}): ${n.value}`);
+    } else {
+      out.push(`${pad}Variable: ${n.name}`);
+    }
+  }
+  return out;
+}
+
+function zsRunSyntax(tokens, grammar) {
+  let i = 0;
+  const last = tokens.length ? tokens[tokens.length - 1] : { line: 1, col: 1, lexeme: "" };
+  const eof = { kind: "EOF", lexeme: "end of file", line: last.line, col: last.col + last.lexeme.length };
+  const cur = () => (i < tokens.length ? tokens[i] : eof);
+  const show = (kind) => ({ ID: "identifier", EOF: "end of file" }[kind] || zsLexeme(grammar, kind));
+
+  function fail(tok, message) {
+    const err = new Error(message);
+    err.isParse = true;
+    err.line = tok.line;
+    err.col = tok.col;
+    err.message = message;
+    throw err;
+  }
+
+  function match(kind) {
+    const tok = cur();
+    if (tok.kind !== kind) fail(tok, `expected '${show(kind)}' but found '${tok.lexeme}'`);
+    i += 1;
+    return tok;
+  }
+
+  function accept(kind) {
+    if (cur().kind === kind) { i += 1; return true; }
+    return false;
+  }
+
+  function program() {
+    const body = stmtList();
+    match("HALT"); match("SEMI"); match("EOF");
+    return body;
+  }
+
+  function stmtList() {
+    const out = [];
+    while (!["EOF", "RBRACE", "HALT"].includes(cur().kind)) {
+      out.push(stmt());
+    }
+    return out;
+  }
+
+  function stmt() {
+    const tok = cur();
+    const { kind, line } = tok;
+    if (kind === "LET") {
+      i += 1;
+      const ttok = cur();
+      if (ttok.kind === "ID") {
+        const name = match("ID").lexeme;
+        if (cur().kind !== "ASSIGN") {
+          fail(cur(), `'${name}' has no type, so it needs a value: ${zsLexeme(grammar, "LET")} ${name} ${zsLexeme(grammar, "ASSIGN")} ...`);
+        }
+        i += 1;
+        const init = expr();
+        match("SEMI");
+        return { node: "decl", type: "auto", name, init, line };
+      }
+      if (!(ttok.kind in ZS_TYPE_OF_ROLE)) {
+        const kinds = Object.keys(ZS_TYPE_OF_ROLE).map(r => zsLexeme(grammar, r)).join(", ");
+        fail(ttok, `expected a type (${kinds}) or a name but found '${ttok.lexeme}'`);
+      }
+      i += 1;
+      const name = match("ID").lexeme;
+      const init = accept("ASSIGN") ? expr() : null;
+      match("SEMI");
+      return { node: "decl", type: ZS_TYPE_OF_ROLE[ttok.kind], name, init, line };
+    }
+    if (kind === "ID") {
+      i += 1;
+      match("ASSIGN");
+      const value = expr();
+      match("SEMI");
+      return { node: "assign", name: tok.lexeme, value, line };
+    }
+    if (kind === "IF" || kind === "WHILE") {
+      i += 1;
+      const cond = expr();
+      const body = block();
+      if (kind === "WHILE") return { node: "while", cond, body, line };
+      const other = accept("ELSE") ? block() : null;
+      return { node: "if", cond, then: body, else: other, line };
+    }
+    if (kind === "PRINT") {
+      i += 1;
+      const value = expr();
+      match("SEMI");
+      return { node: "print", value, line };
+    }
+    fail(tok, `a statement cannot start with '${tok.lexeme}'`);
+  }
+
+  function block() {
+    if (cur().kind !== "LBRACE") return [stmt()];
+    match("LBRACE");
+    const body = stmtList();
+    match("RBRACE");
+    return body;
+  }
+
+  function binary(lower, roles) {
+    let left = lower();
+    while (roles.includes(cur().kind)) {
+      const op = cur();
+      i += 1;
+      left = { node: "bin", op: op.kind, sym: op.lexeme, left, right: lower(), line: op.line };
+    }
+    return left;
+  }
+
+  function expr() {
+    return binary(() => binary(rel, ["AND"]), ["OR"]);
+  }
+
+  function rel() {
+    let left = binary(() => binary(factor, ["MUL", "DIV"]), ["ADD", "SUB"]);
+    if (ZS_REL_ROLES.includes(cur().kind)) {
+      const op = cur();
+      i += 1;
+      const right = binary(() => binary(factor, ["MUL", "DIV"]), ["ADD", "SUB"]);
+      left = { node: "bin", op: op.kind, sym: op.lexeme, left, right, line: op.line };
+    }
+    return left;
+  }
+
+  function factor() {
+    const tok = cur();
+    const kind = tok.kind;
+    if (kind in ZS_LITERALS) {
+      i += 1;
+      return { node: "lit", type: ZS_LITERALS[kind], value: tok.lexeme, line: tok.line };
+    }
+    if (kind === "ID") {
+      i += 1;
+      return { node: "var", name: tok.lexeme, line: tok.line };
+    }
+    if (kind === "NOT") {
+      i += 1;
+      return { node: "un", op: "NOT", sym: tok.lexeme, operand: factor(), line: tok.line };
+    }
+    if (kind === "LPAREN") {
+      i += 1;
+      const inner = expr();
+      match("RPAREN");
+      return inner;
+    }
+    fail(tok, `expected an expression but found '${tok.lexeme}'`);
+  }
+
+  try {
+    const ast = program();
+    return { stage: "syntax", ok: true, ast, tree: zsTreeText(ast).join("\n"), errors: [] };
+  } catch (e) {
+    if (e.isParse) {
+      return { stage: "syntax", ok: false, ast: null, tree: "", errors: [{ line: e.line, col: e.col, message: e.message }] };
+    }
+    throw e;
+  }
+}
+
+function zsRunSemantic(ast, grammar) {
+  const symbols = {}, errors = [];
+  const label = (t) => zsTypeLabel(grammar, t);
+  const error = (line, rule, message) => errors.push({ line, rule, message });
+  const compatible = (target, got) => got === target || (target === "float" && got === "int");
+
+  function typeOf(e) {
+    const k = e.node;
+    if (k === "lit") return e.type;
+    if (k === "var") {
+      if (!(e.name in symbols)) {
+        error(e.line, 2, `variable '${e.name}' is not declared`);
+        return null;
+      }
+      return symbols[e.name].type;
+    }
+    if (k === "un") {
+      const t = typeOf(e.operand);
+      if (t !== null && t !== "bool") {
+        error(e.line, 7, `operator '${e.sym}' needs a ${label("bool")} operand but got ${label(t)}`);
+        return null;
+      }
+      return t;
+    }
+    const lt = typeOf(e.left), rt = typeOf(e.right);
+    if (lt === null || rt === null) return null;
+    const { op, sym, line } = e;
+    if (ZS_ARITH.includes(op) || ZS_COMPARE.includes(op)) {
+      if (!ZS_NUMERIC.includes(lt) || !ZS_NUMERIC.includes(rt)) {
+        error(line, 4, `operator '${sym}' needs numeric (${label("int")} or ${label("float")}) operands but got ${label(lt)} and ${label(rt)}`);
+        return null;
+      }
+      return ZS_COMPARE.includes(op) ? "bool" : (lt === "float" || rt === "float" ? "float" : "int");
+    }
+    if (ZS_LOGIC.includes(op)) {
+      if (lt !== "bool" || rt !== "bool") {
+        error(line, 7, `operator '${sym}' needs ${label("bool")} operands but got ${label(lt)} and ${label(rt)}`);
+        return null;
+      }
+      return "bool";
+    }
+    if (lt !== rt && !(ZS_NUMERIC.includes(lt) && ZS_NUMERIC.includes(rt))) {
+      error(line, 5, `operator '${sym}' cannot compare ${label(lt)} with ${label(rt)}`);
+      return null;
+    }
+    return "bool";
+  }
+
+  function visit(stmts) {
+    for (const s of stmts) {
+      const k = s.node;
+      if (k === "decl") {
+        const got = s.init ? typeOf(s.init) : null;
+        const declared = s.type === "auto" ? (got || "int") : s.type;
+        if (s.name in symbols) {
+          error(s.line, 1, `variable '${s.name}' is already declared at line ${symbols[s.name].line}`);
+        } else {
+          symbols[s.name] = { type: declared, line: s.line };
+        }
+        if (got && !compatible(declared, got)) {
+          error(s.line, 3, `cannot store ${label(got)} value in ${label(declared)} variable '${s.name}'`);
+        }
+      } else if (k === "assign") {
+        const got = typeOf(s.value);
+        const sym = symbols[s.name];
+        if (!sym) {
+          error(s.line, 2, `variable '${s.name}' is not declared`);
+        } else if (got && !compatible(sym.type, got)) {
+          error(s.line, 3, `cannot store ${label(got)} value in ${label(sym.type)} variable '${s.name}'`);
+        }
+      } else if (k === "if" || k === "while") {
+        const got = typeOf(s.cond);
+        if (got && got !== "bool") {
+          error(s.line, 6, `condition must be ${label("bool")} but it is ${label(got)}`);
+        }
+        visit(k === "if" ? s.then : s.body);
+        if (k === "if" && s.else !== null) visit(s.else);
+      } else if (k === "print") {
+        typeOf(s.value);
+      }
+    }
+  }
+
+  visit(ast);
+  const symList = Object.entries(symbols).map(([name, v]) => ({ name, type: label(v.type), line: v.line }));
+  return { stage: "semantic", ok: errors.length === 0, symbols: symList, errors };
+}
+
+function zsRunIcg(ast) {
+  const quads = [];
+  let temps = 0, labels = 0;
+  const temp = () => `t${++temps}`;
+  const label = () => `L${++labels}`;
+  const emit = (op, arg1 = "", arg2 = "", result = "") => quads.push({ op, arg1, arg2, result });
+
+  function expr(e) {
+    const k = e.node;
+    if (k === "lit") return e.value;
+    if (k === "var") return e.name;
+    if (k === "un") {
+      const a = expr(e.operand), t = temp();
+      emit(e.sym, a, "", t);
+      return t;
+    }
+    const a = expr(e.left), b = expr(e.right);
+    const t = temp();
+    emit(e.sym, a, b, t);
+    return t;
+  }
+
+  function stmts(nodes) {
+    for (const s of nodes) {
+      const k = s.node;
+      if (k === "decl" && s.init !== null) {
+        emit("=", expr(s.init), "", s.name);
+      } else if (k === "assign") {
+        emit("=", expr(s.value), "", s.name);
+      } else if (k === "print") {
+        emit("print", expr(s.value));
+      } else if (k === "if") {
+        const cond = expr(s.cond), lElse = label();
+        emit("ifFalse", cond, "", lElse);
+        stmts(s.then);
+        if (s.else === null) {
+          emit("label", "", "", lElse);
+        } else {
+          const lEnd = label();
+          emit("goto", "", "", lEnd);
+          emit("label", "", "", lElse);
+          stmts(s.else);
+          emit("label", "", "", lEnd);
+        }
+      } else if (k === "while") {
+        const lStart = label(), lEnd = label();
+        emit("label", "", "", lStart);
+        const cond = expr(s.cond);
+        emit("ifFalse", cond, "", lEnd);
+        stmts(s.body);
+        emit("goto", "", "", lStart);
+        emit("label", "", "", lEnd);
+      }
+    }
+  }
+
+  stmts(ast);
+  emit("halt");
+
+  const tac = ["# --- ZynoScript IR Engine v1.0 ---"];
+  for (const q of quads) {
+    const { op, arg1: a1, arg2: a2, result: res } = q;
+    if (op === "label") tac.push(`${res}:`);
+    else if (op === "=") tac.push(`    ${res} = ${a1}`);
+    else if (op === "goto") tac.push(`    goto ${res}`);
+    else if (op === "ifFalse") tac.push(`    ifFalse ${a1} goto ${res}`);
+    else if (op === "print" || op === "halt") tac.push(`    ${op} ${a1}`.replace(/\s+$/, ""));
+    else if (a2 === "") tac.push(`    ${res} = ${op} ${a1}`);
+    else tac.push(`    ${res} = ${a1} ${op} ${a2}`);
+  }
+
+  return { stage: "icg", ok: true, tac, quads, errors: [] };
+}
+
+function zsRunOutput(ast, grammar) {
+  const MAX_STEPS = 10000;
+  const trueWord = zsLexeme(grammar, "TRUE");
+  const falseWord = zsLexeme(grammar, "FALSE");
+  const env = {}, types = {}, out = [];
+  let steps = 0;
+
+  const mkFloat = (v) => ({ __zsFloat: true, v: Number(v) });
+  const isFloat = (x) => x && typeof x === "object" && x.__zsFloat === true;
+  const numVal = (x) => (isFloat(x) ? x.v : x);
+
+  function fault(line, message) {
+    const err = new Error(message);
+    err.isRuntime = true;
+    err.line = line;
+    err.message = message;
+    throw err;
+  }
+
+  function tick(line) {
+    steps += 1;
+    if (steps > MAX_STEPS) fault(line, `stopped after ${MAX_STEPS} steps (is a loop never finishing?)`);
+  }
+
+  function show(v) {
+    if (typeof v === "boolean") return v ? trueWord : falseWord;
+    if (isFloat(v)) {
+      return Number.isInteger(v.v) ? v.v.toFixed(1) : String(v.v);
+    }
+    return String(v);
+  }
+
+  function literal(n) {
+    const { type: t, value: raw } = n;
+    if (t === "bool") return raw === trueWord;
+    if (t === "int") return parseInt(raw, 10);
+    if (t === "float") return mkFloat(parseFloat(raw));
+    if (raw.length >= 2 && (raw[0] === '"' || raw[0] === "'") && raw[raw.length - 1] === raw[0]) {
+      return raw.slice(1, -1);
+    }
+    return raw;
+  }
+
+  function evalExpr(n) {
+    const { node: k, line } = n;
+    if (k === "lit") return literal(n);
+    if (k === "var") {
+      if (!(n.name in env)) fault(line, `'${n.name}' has no value yet`);
+      return env[n.name];
+    }
+    if (k === "un") return !evalExpr(n.operand);
+    const a = evalExpr(n.left), b = evalExpr(n.right), op = n.op;
+    const anyFloat = isFloat(a) || isFloat(b);
+    const av = numVal(a), bv = numVal(b);
+    if (op === "ADD") {
+      if (typeof av === "string" && typeof bv === "string") return av + bv;
+      return anyFloat ? mkFloat(av + bv) : av + bv;
+    }
+    if (op === "SUB") return anyFloat ? mkFloat(av - bv) : av - bv;
+    if (op === "MUL") return anyFloat ? mkFloat(av * bv) : av * bv;
+    if (op === "DIV") {
+      if (bv === 0) fault(line, "division by zero");
+      return anyFloat ? mkFloat(av / bv) : Math.trunc(av / bv);
+    }
+    if (op === "GT") return av > bv;
+    if (op === "LT") return av < bv;
+    if (op === "EQ") return av === bv;
+    if (op === "NE") return av !== bv;
+    if (op === "AND") return Boolean(av && bv);
+    if (op === "OR") return Boolean(av || bv);
+    fault(line, `unknown operator '${op}'`);
+  }
+
+  function execBlock(stmts) {
+    for (const s of stmts) execStmt(s);
+  }
+
+  function execStmt(s) {
+    tick(s.line);
+    const k = s.node;
+    if (k === "decl") {
+      const defaults = { int: 0, float: mkFloat(0.0), string: "", bool: false, char: "" };
+      let value = s.init ? evalExpr(s.init) : (defaults[s.type] ?? 0);
+      types[s.name] = s.type;
+      if (s.type === "float" && typeof value === "number") value = mkFloat(value);
+      env[s.name] = value;
+    } else if (k === "assign") {
+      let value = evalExpr(s.value);
+      if (types[s.name] === "float" && typeof value === "number") value = mkFloat(value);
+      env[s.name] = value;
+    } else if (k === "print") {
+      out.push(show(evalExpr(s.value)));
+    } else if (k === "if") {
+      if (evalExpr(s.cond)) execBlock(s.then);
+      else if (s.else !== null) execBlock(s.else);
+    } else if (k === "while") {
+      while (evalExpr(s.cond)) {
+        tick(s.line);
+        execBlock(s.body);
+      }
+    }
+  }
+
+  const errors = [];
+  try {
+    execBlock(ast);
+  } catch (e) {
+    if (e.isRuntime) errors.push({ line: e.line, message: e.message });
+    else throw e;
+  }
+
+  return {
+    stage: "output",
+    ok: errors.length === 0,
+    output: out,
+    variables: Object.entries(env).map(([name, v]) => ({ name, value: show(v) })),
+    steps,
+    errors
+  };
+}
+
+function compileLocal(stage, source, grammar) {
+  const g = grammar || ZS_DEFAULT_GRAMMAR;
+  const stages = ["lexical", "syntax", "semantic", "icg", "output"];
+  const results = {};
+  let blocked_by = null;
+  results.lexical = zsRunLexical(source, g);
+  const steps = [
+    ["syntax", () => zsRunSyntax(results.lexical.tokens, g)],
+    ["semantic", () => zsRunSemantic(results.syntax.ast, g)],
+    ["icg", () => zsRunIcg(results.syntax.ast, g)],
+    ["output", () => zsRunOutput(results.syntax.ast, g)]
+  ];
+  for (const [name, call] of steps) {
+    const prev = stages[stages.indexOf(name) - 1];
+    if (stages.indexOf(name) > stages.indexOf(stage)) break;
+    if (!results[prev].ok) {
+      blocked_by = prev;
+      break;
+    }
+    results[name] = call();
+  }
+  return { stage, blocked_by, results };
+}
+
 const compileCache = new Map();
+
+const ZS_DEFAULT_ROLE_MEANINGS = {
+  keyword_roles: {
+    LET: "Declare a variable", PRINT: "Print output", IF: "If branch", ELSE: "Else branch",
+    WHILE: "While loop", HALT: "End of program", INT: "Type: integer", FLOAT: "Type: decimal",
+    STRING: "Type: text", BOOL: "Type: true/false", CHAR: "Type: single character",
+    TRUE: "Boolean true", FALSE: "Boolean false"
+  },
+  operator_roles: {
+    ASSIGN: "Assign value", ADD: "Addition", SUB: "Subtraction", MUL: "Multiplication",
+    DIV: "Division", GT: "Greater than", LT: "Less than", EQ: "Equal to", NE: "Not equal to",
+    AND: "Logical AND", OR: "Logical OR", NOT: "Logical NOT"
+  }
+};
 
 const state = {
   user: null,
-  grammar: null,
-  draft: null,
+  grammar: {
+    grammar: JSON.parse(JSON.stringify(ZS_DEFAULT_GRAMMAR)),
+    keyword_roles: ZS_DEFAULT_ROLE_MEANINGS.keyword_roles,
+    operator_roles: ZS_DEFAULT_ROLE_MEANINGS.operator_roles,
+    bnf: ""
+  },
+  draft: JSON.parse(JSON.stringify(ZS_DEFAULT_GRAMMAR)),
   gtab: "keywords",
   selected: null,
   authMode: "login",
@@ -271,6 +930,7 @@ window.addEventListener("keydown", (e) => {
 
 /* ---------- View Navigation ---------- */
 function showView(name) {
+  if (name !== "auth") document.documentElement.classList.remove("show-auth-immediately");
   if (typeof toggleProfileDropdown === "function") toggleProfileDropdown(false);
   const topbar = $("#topbar");
   if (topbar) topbar.hidden = name === "auth";
@@ -1290,10 +1950,8 @@ function renderGrammar() {
       return `
         <div class="grammar-card">
           <div class="grammar-card-info">
-            <div class="grammar-card-role-row">
-              <span class="grammar-role-badge">${esc(role)}</span>
-              <label class="grammar-card-label" for="g-${role}" title="${esc(meaning)}">${esc(meaning)}</label>
-            </div>
+            <span class="grammar-role-badge">${esc(role)}</span>
+            <label class="grammar-card-label" for="g-${role}" title="${esc(meaning)}">${esc(meaning)}</label>
           </div>
           <input class="grammar-card-input" id="g-${role}" data-role="${role}" value="${esc(val)}" spellcheck="false" autocomplete="off" placeholder="${esc(role)}">
         </div>`;
@@ -1430,6 +2088,19 @@ async function runStage(stage) {
   }
 
   try {
+    if (code.value.length <= 10000 && typeof compileLocal === "function") {
+      const activeGrammar = (state.grammar && state.grammar.grammar) ? state.grammar.grammar : ZS_DEFAULT_GRAMMAR;
+      const res = compileLocal(stage, code.value, activeGrammar);
+      compileCache.set(cacheKey, res);
+      if (compileCache.size > 50) compileCache.delete(compileCache.keys().next().value);
+      state.lastResults = res;
+      STAGES.forEach((s, i) => setState(s, i > upto ? "idle" : res.results[s] ? (res.results[s].ok ? "ok" : "errors") : "blocked"));
+      renderOutput(stage, res);
+      Api.post(`/api/compile/${stage}`, { source: code.value }).catch((err) => {
+        if (err && err.status === 401) leaveApp(err.message);
+      });
+      return;
+    }
     const res = await Api.post(`/api/compile/${stage}`, { source: code.value });
     compileCache.set(cacheKey, res);
     if (compileCache.size > 50) compileCache.delete(compileCache.keys().next().value);
@@ -1441,7 +2112,7 @@ async function runStage(stage) {
     if (err.status === 401) return leaveApp(err.message);
     $("#output").innerHTML = `<p class="form-error">${esc(err.message)}</p>`;
   } finally {
-    $$(".stage, #run-all, #btn-run-editor").forEach((b) => {
+    $(".stage, #run-all, #btn-run-editor").forEach((b) => {
       b.disabled = false;
       b.classList.remove("is-running");
     });

@@ -322,14 +322,16 @@ def seed_admin_user(conn_or_cur, is_pg: bool = False):
 
 
 def init_db():
+    global _db_initialized
+    _db_initialized = True
     db_url = get_database_url()
     if db_url and psycopg2 is not None:
         try:
-            with psycopg2.connect(db_url, connect_timeout=10) as conn:
-                with conn.cursor() as cur:
-                    cur.execute(PG_SCHEMA)
-                    seed_admin_user(cur, is_pg=True)
-                conn.commit()
+            conn = _get_pg_conn(db_url)
+            with conn.cursor() as cur:
+                cur.execute(PG_SCHEMA)
+                seed_admin_user(cur, is_pg=True)
+            conn.commit()
             return
         except Exception as e:
             print(f"Warning: PostgreSQL schema initialization error: {e}")
