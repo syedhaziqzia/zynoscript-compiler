@@ -134,12 +134,16 @@ process.stdout.write(JSON.stringify(out));
         self.assertGreaterEqual(len(js_bundle), 8)
 
         error_presets = {"Lexical errors", "Syntax error: missing ;", "Semantic errors"}
+        runtime_error_presets = {"Runtime error: division by zero"}
         for name, item in js_bundle.items():
             code = item["code"]
             js_res = item["res"]
             py_res = pipeline.run("output", code, G)
             if name in error_presets:
                 self.assertIsNotNone(py_res["blocked_by"], f"Expected {name} to fail a compiler stage")
+            elif name in runtime_error_presets:
+                self.assertIsNone(py_res["blocked_by"], f"Expected {name} to reach output stage")
+                self.assertFalse(py_res["results"]["output"]["ok"], f"Expected {name} to fail at runtime in output stage")
             else:
                 self.assertIsNone(py_res["blocked_by"], f"Expected {name} to pass all stages without error, blocked by {py_res['blocked_by']}")
                 self.assertTrue(py_res["results"]["output"]["ok"], f"Expected {name} output stage to succeed")

@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://zynoscript-compiler.vercel.app"><img src="https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel&logoColor=white" alt="Live Demo"/></a>
-  <a href="#-running-the-test-suite"><img src="https://img.shields.io/badge/Tests-40%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
+  <a href="#-running-the-test-suite"><img src="https://img.shields.io/badge/Tests-48%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
   <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI"/></a>
   <a href="https://neon.tech"><img src="https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=white" alt="Neon Postgres"/></a>
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white" alt="Python Version"/></a>
@@ -104,6 +104,8 @@ Every stage lives in [`app/engines/`](app/engines/) as an independent pure Pytho
 Every valid ZynoScript program must conclude with `halt;`:
 
 ```zynoscript
+/~~ ZynoScript Example:
+    Demonstrates loops, branching, comments, and explicit type casting (as~). ~~/
 let whole counter := 1;
 let whole maxLimit := 5;
 
@@ -111,7 +113,7 @@ spin (counter <<= maxLimit) {
     whenTrue (counter ~= 3) {
         beam "Three reached!";
     } elseWay {
-        beam counter;
+        beam "Step: " +~ (counter as~ phrase); // cast whole -> phrase
     }
     counter := counter +~ 1;
 }
@@ -121,9 +123,22 @@ halt;
 ```
 
 * **Data Types:** `whole` (int), `part` (float), `phrase` (str), `flag` (bool), `mark` (char)
+* **Explicit Type Casting (`as~`):** `x as~ whole`, `x as~ part`, `x as~ phrase`, `x as~ flag`, `x as~ mark` (customizable via the `CAST` operator role)
+* **Comments:** Single-line `// ...` and multi-line block comments `/~~ ... ~~/`
 * **Conditions & Loops:** `whenTrue (condition) { ... } elseWay { ... }`, `spin (condition) { ... }`
-* **Operators:** `+~`, `-~`, `*~`, `/~` (Math) | `=>>`, `<<=`, `~=`, `~!` (Comparison)
+* **Operators:** `+~` (Math & `phrase` concatenation), `-~`, `*~`, `/~` | `=>>`, `<<=`, `~=`, `~!` (Comparison) | `&&~`, `||~`, `!~` (Logical)
 * **Print & Finish:** `beam <expression>;` | `halt;`
+
+---
+
+## ✨ Studio Workbench Highlights
+
+* **Light & Dark Mode Theme Toggle:** Switch seamlessly between crisp **Light Mode** and full-studio **Dark Mode** (`html[data-theme="dark"]`) from the top navigation bar, persisted automatically in `localStorage`.
+* **Live Custom-Grammar Syntax Highlighting:** Colorizes keywords, data types, booleans, operators, numbers, strings, and comments in real time—automatically adapting when you rename any keyword or operator in the Grammar Drawer.
+* **Shortcuts & Quick Actions Hub (`?`):** One-click topbar modal combining keyboard shortcut references (`Ctrl+Enter`, `Ctrl+K`, `Tab`, `?`, `Esc`), mouse tips, and instant studio triggers.
+* **Inline Error Diagnostics & Gutter Jump:** Highlights offending lines in the editor gutter and displays clean diagnostic rows that jump straight to the exact source line on click.
+* **Resizable Desktop Split & Mobile Workbench Tabs:** Drag the center divider on desktop to resize the editor/output split (double-click to reset 50/50), or switch cleanly between `Code Editor` and `Compiler Output` tabs on mobile screens.
+* **26 Built-In Preset Programs:** Includes **22 working programs** (star pyramids, diamond patterns, prime checker, palindrome, FizzBuzz, Euclidean GCD/LCM, Collatz `3n+1`, binary converter, ASCII Caesar cipher, type casting, and grade calculator) plus **4 dedicated stage error presets** (`Lexical errors`, `Syntax error: missing ;`, `Semantic errors`, and `Runtime error: division by zero`).
 
 ---
 
@@ -198,14 +213,14 @@ This repository includes [`vercel.json`](vercel.json) ready for deployment with 
 * **Administrator Setup:** Admin accounts are created strictly by setting `ADMIN_USERNAME` and `ADMIN_PASSWORD` in server environment variables (`.env` or Vercel dashboard).
 * **SQL Injection Immunity:** 100% of database queries use parameterized placeholders (`?` / `%s`).
 * **Timing-Safe Authentication:** Passwords use salted PBKDF2-HMAC-SHA256 (120,000 rounds) with constant-time comparison (`secrets.compare_digest`) and dummy hashing for non-existent users.
-* **Cybersecurity HTTP Headers:** Every response includes `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `X-XSS-Protection: 1; mode=block`, and `Referrer-Policy: strict-origin-when-cross-origin`.
-* **Input Flood Prevention:** Code submissions are bounded by `MAX_SOURCE_CHARS` (20,000 characters) to prevent memory exhaustion.
+* **Cybersecurity HTTP Headers:** Every response includes `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `X-XSS-Protection: 1; mode=block`, `Permissions-Policy`, and `Referrer-Policy: strict-origin-when-cross-origin`.
+* **Rate Limiting & Input Boundaries:** Code submissions are bounded by `MAX_SOURCE_CHARS` (`10,000` characters / 10 KB), interpreter loops halt after `MAX_STEPS` (`10,000` steps), compile endpoints are rate-limited (`120` requests/min per user), and sign-in is protected against brute-force guessing (`8` failed attempts per `5` minutes).
 
 ---
 
 ## 🧪 Running the Test Suite
 
-Run the automated integration and unit test suite (40 tests covering engines, authentication, authorization, security headers, and permission boundaries):
+Run the automated integration, parity, and unit test suite (**48 tests** covering all 5 compiler engines, browser-vs-server compiler parity across all 26 presets, `as~` type casting, `/~~ ... ~~/` block comments, authentication, rate limiting, and permission boundaries):
 
 ```bash
 python -m unittest discover tests

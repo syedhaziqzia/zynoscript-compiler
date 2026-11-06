@@ -1146,7 +1146,8 @@ async function enterApp(user) {
   const isAdmin = user.role === "admin";
   const topbar = $("#topbar");
   if (topbar) topbar.hidden = false;
-  $("#nav").hidden = $("#whoami").hidden = $("#cmd-trigger").hidden = false;
+  $("#nav").hidden = $("#whoami").hidden = false;
+  if ($("#cmd-trigger")) $("#cmd-trigger").hidden = false;
   if ($("#btn-shortcuts-help")) $("#btn-shortcuts-help").hidden = false;
   if ($("#btn-theme-toggle")) $("#btn-theme-toggle").hidden = false;
   $("#nav-admin").hidden = $("#log-user").hidden = !isAdmin;
@@ -1172,7 +1173,8 @@ function leaveApp(message) {
   state.user = null;
   const topbar = $("#topbar");
   if (topbar) topbar.hidden = true;
-  $("#nav").hidden = $("#whoami").hidden = $("#cmd-trigger").hidden = true;
+  $("#nav").hidden = $("#whoami").hidden = true;
+  if ($("#cmd-trigger")) $("#cmd-trigger").hidden = true;
   if ($("#btn-shortcuts-help")) $("#btn-shortcuts-help").hidden = true;
   if ($("#btn-theme-toggle")) $("#btn-theme-toggle").hidden = true;
   $("#nav-admin").hidden = $("#log-user").hidden = true;
@@ -3626,6 +3628,26 @@ if (btnShortcutsHelp && dlgShortcuts) {
   btnShortcutsHelp.addEventListener("click", () => openShortcutsDialog());
   dlgShortcuts.addEventListener("click", (e) => {
     if (e.target === dlgShortcuts) dlgShortcuts.close();
+    const qa = e.target.closest("[data-quick-action]");
+    if (qa) {
+      const act = qa.dataset.quickAction;
+      dlgShortcuts.close();
+      if (act === "run-all") {
+        showView("workbench");
+        runStage("output");
+      } else if (act === "open-grammar") {
+        showView("workbench");
+        openGrammarDrawer();
+      } else if (act === "toggle-theme") {
+        toggleStudioTheme();
+      } else if (act === "open-cmd") {
+        openCmdPalette();
+      } else if (act === "view-guide") {
+        showView("guide");
+      } else if (act === "copy-output" && btnCopyOutput) {
+        btnCopyOutput.click();
+      }
+    }
   });
 }
 

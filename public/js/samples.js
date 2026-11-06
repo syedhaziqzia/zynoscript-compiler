@@ -87,6 +87,16 @@ whenTrue (ok &&~ a) {
 }
 halt;
 `,
+  "Runtime error: division by zero": `/~~ Stage 05 Runtime Error Demo
+    Passes Lexical, Syntax, Semantic, and ICG checks,
+    then triggers a runtime division-by-zero fault during execution. ~~/
+let whole numerator := 100;
+let whole divisor := 5;
+divisor := divisor -~ 5;    // divisor becomes 0 at runtime
+let whole result := numerator /~ divisor;
+beam result;
+halt;
+`,
   "Loop with if/else inside": `// Count even and odd numbers from 0 to 10
 let whole i := 0;
 let whole evens := 0;

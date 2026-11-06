@@ -3562,10 +3562,10 @@ dialog.dlg-grammar .dlg-grammar-body {
   40%, 60% { transform: translateX(4px); }
 }
 
-/* 8. Keyboard Shortcuts Help Dialog */
+/* 8. Keyboard Shortcuts & Quick Actions Dialog */
 dialog.dlg-shortcuts {
-  width: min(520px, 92vw);
-  max-width: 520px;
+  width: min(560px, 94vw);
+  max-width: 560px;
   border-radius: 16px;
   padding: 20px 24px;
   border: 1px solid var(--line);
@@ -3574,10 +3574,28 @@ dialog.dlg-shortcuts {
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22);
 }
 
+.shortcuts-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 68vh;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.shortcuts-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
 .shortcuts-grid {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .shortcut-row {
@@ -3585,11 +3603,37 @@ dialog.dlg-shortcuts {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 12px;
+  padding: 9px 12px;
   background: var(--bg-subtle);
   border: 1px solid var(--line);
   border-radius: 10px;
   font-size: 13px;
+}
+
+.shortcut-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.shortcut-info strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.shortcuts-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 8px;
+}
+
+.shortcuts-quick-actions .btn {
+  justify-content: flex-start;
+  gap: 7px;
+  font-size: 12px;
+  padding: 7px 10px;
 }
 
 .shortcut-keys {

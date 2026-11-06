@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=6.2">
+  <link rel="stylesheet" href="css/style.css?v=6.3">
   <script>
     if (!localStorage.getItem("zs_token") && !sessionStorage.getItem("zs_token")) {
       document.documentElement.classList.add("show-auth-immediately");
@@ -35,12 +35,7 @@
       </nav>
     </div>
     <div class="topbar-right">
-      <button id="cmd-trigger" class="cmd-trigger-btn" title="Command Palette (Ctrl+K)" hidden>
-        <span class="cmd-k-icon" data-icon="command"></span>
-        <span class="cmd-k-label">Commands</span>
-        <kbd class="cmd-k-kbd">Ctrl K</kbd>
-      </button>
-      <button id="btn-shortcuts-help" class="topbar-icon-btn" type="button" title="Keyboard Shortcuts (?)" aria-label="Keyboard Shortcuts" hidden>
+      <button id="btn-shortcuts-help" class="topbar-icon-btn" type="button" title="Shortcuts & Quick Actions (?)" aria-label="Shortcuts and Quick Actions" hidden>
         <span data-icon="keyboard"></span>
       </button>
       <button id="btn-theme-toggle" class="topbar-icon-btn" type="button" title="Switch Theme (Light / Dark)" aria-label="Toggle Theme" hidden>
@@ -537,25 +532,86 @@ let flag ok := 1 as~ flag;              // 1 -> true</pre>
     </div>
   </dialog>
 
-  <!-- Keyboard Shortcuts Help Modal (?) -->
+  <!-- Keyboard Shortcuts & Studio Quick Actions Modal (?) -->
   <dialog id="dlg-shortcuts" class="dlg-shortcuts">
     <form method="dialog">
       <div class="dlg-grammar-header">
         <div>
-          <h2>Keyboard Shortcuts</h2>
-          <p class="muted text-small">Speed up your workflow in ZynoScript Studio</p>
+          <h2>Shortcuts &amp; Quick Actions</h2>
+          <p class="muted text-small">Keyboard shortcuts, editor controls, and one-click studio actions</p>
         </div>
         <button value="cancel" class="drawer-close-btn" formnovalidate aria-label="Close"><span data-icon="close"></span></button>
       </div>
-      <div class="shortcuts-grid">
-        <div class="shortcut-row"><span>Run All Compiler Stages</span><kbd>Ctrl + Enter</kbd></div>
-        <div class="shortcut-row"><span>Open Command Palette</span><kbd>Ctrl + K</kbd></div>
-        <div class="shortcut-row"><span>Indent Source Line</span><kbd>Tab</kbd></div>
-        <div class="shortcut-row"><span>Show Keyboard Shortcuts</span><kbd>?</kbd></div>
-        <div class="shortcut-row"><span>Close Drawer / Modal</span><kbd>Esc</kbd></div>
+      <div class="shortcuts-modal-body">
+        <div class="shortcuts-section-title">Keyboard Shortcuts</div>
+        <div class="shortcuts-grid">
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <strong>Run Full Compiler Pipeline</strong>
+              <span class="muted text-small">Executes Lexical &rarr; Syntax &rarr; Semantic &rarr; ICG &rarr; Output</span>
+            </div>
+            <kbd>Ctrl + Enter</kbd>
+          </div>
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <strong>Search All Commands &amp; Presets</strong>
+              <span class="muted text-small">Instant search across stages, views, and sample programs</span>
+            </div>
+            <kbd>Ctrl + K</kbd>
+          </div>
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <strong>Open / Close This Shortcuts Guide</strong>
+              <span class="muted text-small">Works anywhere outside text inputs</span>
+            </div>
+            <kbd>?</kbd>
+          </div>
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <strong>Indent Source Code</strong>
+              <span class="muted text-small">Inserts 4 spaces at the cursor inside the code editor</span>
+            </div>
+            <kbd>Tab</kbd>
+          </div>
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <strong>Close Active Drawer or Modal</strong>
+              <span class="muted text-small">Closes Grammar Drawer, Shortcuts, or Command Search</span>
+            </div>
+            <kbd>Esc</kbd>
+          </div>
+        </div>
+
+        <div class="shortcuts-section-title">Workbench Tips &amp; Mouse Controls</div>
+        <div class="shortcuts-grid">
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <strong>Jump to Error Line</strong>
+              <span class="muted text-small">Click any diagnostic row or red line number in the gutter</span>
+            </div>
+            <kbd>Click Error</kbd>
+          </div>
+          <div class="shortcut-row">
+            <div class="shortcut-info">
+              <strong>Resize Editor / Output Split</strong>
+              <span class="muted text-small">Drag the center divider bar; double-click to reset 50/50</span>
+            </div>
+            <kbd>Drag / Dbl-Click</kbd>
+          </div>
+        </div>
+
+        <div class="shortcuts-section-title">Quick Studio Actions</div>
+        <div class="shortcuts-quick-actions">
+          <button type="button" class="btn ghost small" data-quick-action="run-all"><span data-icon="play"></span> Run All Stages</button>
+          <button type="button" class="btn ghost small" data-quick-action="open-grammar"><span data-icon="sliders"></span> Customize Grammar</button>
+          <button type="button" class="btn ghost small" data-quick-action="toggle-theme"><span data-icon="moon"></span> Toggle Light / Dark</button>
+          <button type="button" class="btn ghost small" data-quick-action="open-cmd"><span data-icon="search"></span> Search Presets (Ctrl+K)</button>
+          <button type="button" class="btn ghost small" data-quick-action="view-guide"><span data-icon="book"></span> Language Guide</button>
+          <button type="button" class="btn ghost small" data-quick-action="copy-output"><span data-icon="copy"></span> Copy Output</button>
+        </div>
       </div>
       <div class="dlg-actions">
-        <button value="cancel" class="btn primary small" formnovalidate>Got it</button>
+        <button value="cancel" class="btn primary small" formnovalidate>Done</button>
       </div>
     </form>
   </dialog>
@@ -564,9 +620,9 @@ let flag ok := 1 as~ flag;              // 1 -> true</pre>
   <div id="toast" class="toast" role="status" hidden></div>
 
   <!-- Scripts -->
-  <script defer src="js/icons.js?v=6.2"></script>
-  <script defer src="js/samples.js?v=6.2"></script>
-  <script defer src="js/api.js?v=6.2"></script>
-  <script defer src="js/app.js?v=6.2"></script>
+  <script defer src="js/icons.js?v=6.3"></script>
+  <script defer src="js/samples.js?v=6.3"></script>
+  <script defer src="js/api.js?v=6.3"></script>
+  <script defer src="js/app.js?v=6.3"></script>
 </body>
 </html>
