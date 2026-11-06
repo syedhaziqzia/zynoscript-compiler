@@ -459,6 +459,9 @@ function zsRunSemantic(ast, rawGrammar) {
     const lt = typeOf(e.left), rt = typeOf(e.right);
     if (lt === null || rt === null) return null;
     const { op, sym, line } = e;
+    if (op === "ADD" && lt === "string" && rt === "string") {
+      return "string";
+    }
     if (ZS_ARITH.includes(op) || ZS_COMPARE.includes(op)) {
       if (!ZS_NUMERIC.includes(lt) || !ZS_NUMERIC.includes(rt)) {
         error(line, 4, `operator '${sym}' needs numeric (${label("int")} or ${label("float")}) operands but got ${label(lt)} and ${label(rt)}`);

@@ -85,6 +85,8 @@ class Analyzer:
         if lt is None or rt is None:
             return None
         op, sym, line = e["op"], e["sym"], e["line"]
+        if op == "ADD" and lt == "string" and rt == "string":
+            return "string"
         if op in ARITH + COMPARE:
             if lt not in NUMERIC or rt not in NUMERIC:
                 self.error(line, 4, f"operator '{sym}' needs numeric ({self.label('int')} or {self.label('float')}) operands but got {self.label(lt)} and {self.label(rt)}")

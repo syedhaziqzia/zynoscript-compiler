@@ -52,8 +52,8 @@ halt;
 `,
   "Comments guide": `// Single-line comment: everything after // until end of line is ignored
 /~~ Multi-line block comment:
-    begins with slash-tilde-tilde (/~~)
-    and closes with tilde-tilde-slash (~~/) ~~/
+    begins with slash-tilde-tilde
+    and closes with tilde-tilde-slash ~~/
 let whole score := 90;   // trailing comment after code
 let flag passed := score =>> 50 /~~ inline block comment ~~/ ;
 whenTrue passed
@@ -160,7 +160,7 @@ halt;
     Uses nested spin loops to build each row of stars. ~~/
 let whole rows := 5;
 let whole r := 1;
-spin (r <<= rows) {
+spin (r <<= rows +~ 1) {
     let phrase line := "";
     let whole spaces := rows -~ r;
     spin (spaces =>> 0) {
@@ -177,14 +177,14 @@ spin (r <<= rows) {
 }
 halt;
 `,
-  "Right triangle stars": `// Right-Angled Star Triangle & Inverted Triangle
+  "Right triangle stars": `// Right-Angled Star Triangle
 let whole n := 5;
 let whole row := 1;
 beam "Growing Star Triangle:";
-spin (row <<= n) {
+spin (row <<= n +~ 1) {
     let phrase stars := "";
     let whole col := 1;
-    spin (col <<= row) {
+    spin (col <<= row +~ 1) {
         stars := stars +~ "* ";
         col := col +~ 1;
     }
@@ -197,15 +197,18 @@ halt;
     Prints an upper pyramid followed by an inverted lower pyramid. ~~/
 let whole half := 4;
 let whole r := 1;
+let phrase rowStr := "";
+let whole sp := 0;
+let whole st := 0;
 // Upper half
-spin (r <<= half) {
-    let phrase rowStr := "";
-    let whole sp := half -~ r;
+spin (r <<= half +~ 1) {
+    rowStr := "";
+    sp := half -~ r;
     spin (sp =>> 0) {
         rowStr := rowStr +~ " ";
         sp := sp -~ 1;
     }
-    let whole st := (r *~ 2) -~ 1;
+    st := (r *~ 2) -~ 1;
     spin (st =>> 0) {
         rowStr := rowStr +~ "*";
         st := st -~ 1;
@@ -215,14 +218,14 @@ spin (r <<= half) {
 }
 // Lower half
 r := half -~ 1;
-spin (r =>> 1) {
-    let phrase rowStr := "";
-    let whole sp := half -~ r;
+spin (r =>> 0) {
+    rowStr := "";
+    sp := half -~ r;
     spin (sp =>> 0) {
         rowStr := rowStr +~ " ";
         sp := sp -~ 1;
     }
-    let whole st := (r *~ 2) -~ 1;
+    st := (r *~ 2) -~ 1;
     spin (st =>> 0) {
         rowStr := rowStr +~ "*";
         st := st -~ 1;
@@ -236,7 +239,7 @@ halt;
 let whole num := 7;
 let whole i := 1;
 beam "Multiplication Table for 7:";
-spin (i <<= 10) {
+spin (i <<= 11) {
     let whole prod := num *~ i;
     beam (num as~ phrase) +~ " x " +~ (i as~ phrase) +~ " = " +~ (prod as~ phrase);
     i := i +~ 1;
@@ -248,10 +251,10 @@ halt;
 let whole limit := 30;
 let whole n := 2;
 beam "Prime numbers up to 30:";
-spin (n <<= limit) {
+spin (n <<= limit +~ 1) {
     let flag isPrime := true;
     let whole d := 2;
-    spin (d *~ d <<= n &&~ isPrime) {
+    spin ((d *~ d) <<= (n +~ 1) &&~ isPrime) {
         whenTrue ((n /~ d) *~ d ~= n) {
             isPrime := false;
         }
@@ -285,7 +288,7 @@ halt;
 `,
   "FizzBuzz challenge": `// Classic FizzBuzz from 1 to 15
 let whole i := 1;
-spin (i <<= 15) {
+spin (i <<= 16) {
     let flag div3 := (i /~ 3) *~ 3 ~= i;
     let flag div5 := (i /~ 5) *~ 5 ~= i;
     whenTrue (div3 &&~ div5) {
@@ -306,12 +309,12 @@ spin (i <<= 15) {
 halt;
 `,
   "GCD & LCM (Euclidean)": `/~~ Greatest Common Divisor (GCD) & Least Common Multiple (LCM)
-    Uses Euclid's subtraction/remainder loop. ~~/
+    Uses Euclid's remainder loop. ~~/
 let whole x := 48;
 let whole y := 18;
 let whole a := x;
 let whole b := y;
-spin (b !~ 0) {
+spin (b ~! 0) {
     let whole rem := a -~ ((a /~ b) *~ b);
     a := b;
     b := rem;
@@ -388,10 +391,10 @@ halt;
 `,
   "Student grade report": `/~~ Weighted Grade Calculator
     Combines part arithmetic, whole casting, and mark letter grades. ~~/
-let part midterm := 84.5;
+let part midterm := 86.0;
 let part finalExam := 92.0;
-let part project := 95.5;
-let part weighted := (midterm *~ 0.3) +~ (finalExam *~ 0.4) +~ (project *~ 0.3);
+let part project := 94.0;
+let part weighted := (midterm *~ 0.25) +~ (finalExam *~ 0.5) +~ (project *~ 0.25);
 let whole roundedScore := weighted as~ whole;
 let mark letterGrade := 'F';
 

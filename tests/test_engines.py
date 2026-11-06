@@ -133,10 +133,16 @@ process.stdout.write(JSON.stringify(out));
         js_bundle = json.loads(proc.stdout)
         self.assertGreaterEqual(len(js_bundle), 8)
 
+        error_presets = {"Lexical errors", "Syntax error: missing ;", "Semantic errors"}
         for name, item in js_bundle.items():
             code = item["code"]
             js_res = item["res"]
             py_res = pipeline.run("output", code, G)
+            if name in error_presets:
+                self.assertIsNotNone(py_res["blocked_by"], f"Expected {name} to fail a compiler stage")
+            else:
+                self.assertIsNone(py_res["blocked_by"], f"Expected {name} to pass all stages without error, blocked by {py_res['blocked_by']}")
+                self.assertTrue(py_res["results"]["output"]["ok"], f"Expected {name} output stage to succeed")
             self.assertEqual(js_res["blocked_by"], py_res["blocked_by"], f"Blocked_by mismatch in {name}")
             for stg in ("lexical", "syntax", "semantic", "icg", "output"):
                 if stg in py_res["results"]:
