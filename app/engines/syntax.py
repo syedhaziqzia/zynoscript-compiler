@@ -139,6 +139,10 @@ class Parser:
     def factor(self):
         tok = self.cur
         kind = tok["kind"]
+        if kind == "SUB":
+            self.i += 1
+            inner = self.factor()
+            return {"node": "un", "op": "NEG", "sym": lexeme(self.g, "SUB"), "operand": inner, "line": tok["line"]}
         if kind in LITERALS:
             self.i += 1
             return {"node": "lit", "type": LITERALS[kind], "value": tok["lexeme"], "line": tok["line"]}
@@ -179,7 +183,8 @@ def tree_text(nodes, depth=0):
         elif k == "bin":
             out.append(f"{pad}Operator: {n['sym']}"); out += tree_text([n["left"], n["right"]], depth + 1)
         elif k == "un":
-            out.append(f"{pad}Operator: {n['sym']}"); out += tree_text(n["operand"], depth + 1)
+            out.append(f"{pad}Negate: {n['sym']}" if n.get("op") == "NEG" else f"{pad}Operator: {n['sym']}")
+            out += tree_text(n["operand"], depth + 1)
         elif k == "lit":
             out.append(f"{pad}Literal ({n['type']}): {n['value']}")
         else:

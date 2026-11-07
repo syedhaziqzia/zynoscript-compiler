@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://zynoscript-compiler.vercel.app"><img src="https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel&logoColor=white" alt="Live Demo"/></a>
-  <a href="#-running-the-test-suite"><img src="https://img.shields.io/badge/Tests-49%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
+  <a href="#-running-the-test-suite"><img src="https://img.shields.io/badge/Tests-55%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
   <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI"/></a>
   <a href="https://neon.tech"><img src="https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=white" alt="Neon Postgres"/></a>
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white" alt="Python Version"/></a>

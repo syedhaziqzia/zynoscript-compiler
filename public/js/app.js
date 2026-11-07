@@ -232,7 +232,7 @@ function zsTreeText(nodes, depth = 0) {
       out.push(`${pad}Operator: ${n.sym}`);
       out.push(...zsTreeText([n.left, n.right], depth + 1));
     } else if (k === "un") {
-      out.push(`${pad}Operator: ${n.sym}`);
+      out.push(`${pad}${n.op === "NEG" ? "Negate: " + n.sym : "Operator: " + n.sym}`);
       out.push(...zsTreeText(n.operand, depth + 1));
     } else if (k === "lit") {
       out.push(`${pad}Literal (${n.type}): ${n.value}`);
@@ -389,6 +389,11 @@ function zsRunSyntax(tokens, rawGrammar) {
   function factor() {
     const tok = cur();
     const kind = tok.kind;
+    if (kind === "SUB") {
+      i += 1;
+      const inner = factor();
+      return { node: "un", op: "NEG", sym: zsLexeme(grammar, "SUB"), operand: inner, line: tok.line };
+    }
     if (kind in ZS_LITERALS) {
       i += 1;
       return { node: "lit", type: ZS_LITERALS[kind], value: tok.lexeme, line: tok.line };
@@ -449,6 +454,14 @@ function zsRunSemantic(ast, rawGrammar) {
       return targetT;
     }
     if (k === "un") {
+      if (e.op === "NEG") {
+        const t = typeOf(e.operand);
+        if (t !== null) {
+          if (t === "int" || t === "float") return t;
+          error(e.line, 5, `cannot negate a ${label(t)} value`);
+        }
+        return null;
+      }
       const t = typeOf(e.operand);
       if (t !== null && t !== "bool") {
         error(e.line, 7, `operator '${e.sym}' needs a ${label("bool")} operand but got ${label(t)}`);
@@ -541,7 +554,8 @@ function zsRunIcg(ast) {
     }
     if (k === "un") {
       const a = expr(e.operand), t = temp();
-      emit(e.sym, a, "", t);
+      const opName = e.op === "NEG" ? "neg" : e.sym;
+      emit(opName, a, "", t);
       return t;
     }
     const a = expr(e.left), b = expr(e.right);
@@ -701,7 +715,14 @@ function zsRunOutput(ast, rawGrammar) {
                         (exprNode.node === "var" && types[exprNode.name] === "char");
       return evalCast(val, n.target, line, isCharSrc);
     }
-    if (k === "un") return !evalExpr(n.operand);
+    if (k === "un") {
+      if (n.op === "NEG") {
+        const val = evalExpr(n.operand);
+        if (isFloat(val)) return mkFloat(-val.v);
+        return -val;
+      }
+      return !evalExpr(n.operand);
+    }
     const a = evalExpr(n.left), b = evalExpr(n.right), op = n.op;
     const anyFloat = isFloat(a) || isFloat(b);
     const av = numVal(a), bv = numVal(b);

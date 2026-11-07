@@ -27,8 +27,9 @@ class Generator:
             self.emit(e["sym"], a, e["target"], t)
             return t
         if k == "un":
+            op_name = "neg" if e.get("op") == "NEG" else e["sym"]
             a, t = self.expr(e["operand"]), self.temp()
-            self.emit(e["sym"], a, "", t)
+            self.emit(op_name, a, "", t)
             return t
         a, b = self.expr(e["left"]), self.expr(e["right"])
         t = self.temp()

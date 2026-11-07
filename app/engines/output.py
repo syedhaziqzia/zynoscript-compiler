@@ -105,6 +105,8 @@ class Interpreter:
                 return ord(val)
             return self.eval_cast(val, n["target"], line)
         if k == "un":
+            if n.get("op") == "NEG":
+                return -self.eval(n["operand"])
             return not self.eval(n["operand"])
         a, b, op = self.eval(n["left"]), self.eval(n["right"]), n["op"]
         try:

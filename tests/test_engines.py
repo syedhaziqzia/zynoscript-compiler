@@ -234,5 +234,49 @@ class OutputEngineTests(unittest.TestCase):
         self.assertIn("stopped after", r["errors"][0]["message"])
 
 
+class UnaryNegationTests(unittest.TestCase):
+    def test_negation_integers(self):
+        r1 = output.run(ast_of("beam -~ 5;\nhalt;"), G)
+        self.assertTrue(r1["ok"])
+        self.assertEqual(r1["output"], ["-5"])
+
+        r2 = output.run(ast_of("let whole a := -~ 3;\nbeam a;\nhalt;"), G)
+        self.assertTrue(r2["ok"])
+        self.assertEqual(r2["output"], ["-3"])
+
+    def test_negation_floats_and_grouped_expressions(self):
+        r1 = output.run(ast_of("beam -~ 3.14;\nhalt;"), G)
+        self.assertTrue(r1["ok"])
+        self.assertEqual(r1["output"], ["-3.14"])
+
+        r2 = output.run(ast_of("beam -~ (2 +~ 3);\nhalt;"), G)
+        self.assertTrue(r2["ok"])
+        self.assertEqual(r2["output"], ["-5"])
+
+    def test_double_negation(self):
+        r = output.run(ast_of("beam -~ -~ 5;\nhalt;"), G)
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["output"], ["5"])
+
+    def test_negate_string_semantic_error(self):
+        src = 'let phrase s := "x";\nbeam -~ s;\nhalt;'
+        sem = semantic.run(ast_of(src), G)
+        self.assertFalse(sem["ok"])
+        self.assertEqual(sem["errors"][0]["line"], 2)
+        self.assertIn("cannot negate a phrase value", sem["errors"][0]["message"])
+
+    def test_tac_and_tree_text_negate(self):
+        ast = ast_of("beam -~ a;\nhalt;")
+        tree = syntax.tree_text(ast)
+        self.assertTrue(any("Negate" in line for line in tree))
+        ir = icg.run(ast, G)
+        self.assertTrue(any("neg" in line for line in ir["tac"]))
+
+    def test_binary_subtraction_still_works(self):
+        r = output.run(ast_of("let whole a := 10;\nlet whole b := 4;\nbeam a -~ b;\nhalt;"), G)
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["output"], ["6"])
+
+
 if __name__ == "__main__":
     unittest.main()

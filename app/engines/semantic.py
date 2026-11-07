@@ -76,6 +76,13 @@ class Analyzer:
                 return None
             return target_t
         if k == "un":
+            if e.get("op") == "NEG":
+                t = self.type_of(e["operand"])
+                if t is not None:
+                    if t in ("int", "float"):
+                        return t
+                    self.error(e["line"], 5, f"cannot negate a {self.label(t)} value")
+                return None
             t = self.type_of(e["operand"])
             if t is not None and t != "bool":
                 self.error(e["line"], 7, f"operator '{e['sym']}' needs a {self.label('bool')} operand but got {self.label(t)}")
