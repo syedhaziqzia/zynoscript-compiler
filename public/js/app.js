@@ -2424,46 +2424,41 @@ const sample = $("#sample");
 sample.innerHTML = Object.keys(SAMPLES).map((k) => `<option>${esc(k)}</option>`).join("");
 enhanceSelect(sample);
 
-async function startNewCustomProgram(forceFresh = false) {
-  const starter = `// Custom ZynoScript Program\nlet whole x := 10\nbeam x\nhalt\n`;
-  if (forceFresh && code.value.trim() && code.value.trim() !== starter.trim() && sample.value === "Custom program") {
-    if (typeof ask === "function") {
-      const ok = await ask({
-        title: "Start Fresh Custom Program?",
-        text: "This will reset your editor with a clean custom program template.",
-        confirm: "Start Fresh"
-      });
-      if (!ok) return;
-    }
-  }
+function startNewCustomProgram() {
   sample.value = "Custom program";
   if (sample._enhanced && typeof sample._enhanced.syncValue === "function") {
     sample._enhanced.syncValue();
   }
-  code.value = starter;
+  code.value = "";
   try {
-    localStorage.setItem("zs_custom_code", starter);
-    localStorage.setItem("zs_autosave_code", starter);
+    localStorage.setItem("zs_custom_code", "");
+    localStorage.setItem("zs_autosave_code", "");
     localStorage.setItem("zs_autosave_sample", "Custom program");
   } catch {}
   activeErrorLines.clear();
   renderGutterNow(true);
   updateGutter();
   resetStates();
+  if (document.activeElement && document.activeElement !== code && typeof document.activeElement.blur === "function") {
+    document.activeElement.blur();
+  }
   code.focus();
-  code.setSelectionRange(code.value.length, code.value.length);
-  toast("Started fresh custom program");
+  toast("Blank custom program ready");
 }
 
 const btnNewProgram = $("#btn-new-program");
 if (btnNewProgram) {
-  btnNewProgram.addEventListener("click", () => startNewCustomProgram(true));
+  btnNewProgram.addEventListener("click", (e) => {
+    e.preventDefault();
+    btnNewProgram.blur();
+    startNewCustomProgram();
+  });
 }
 
 sample.addEventListener("change", () => {
   if (sample.value === "Custom program") {
     const savedCustom = localStorage.getItem("zs_custom_code");
-    code.value = (savedCustom && savedCustom.trim().length > 0) ? savedCustom : SAMPLES["Custom program"];
+    code.value = savedCustom !== null ? savedCustom : "";
   } else {
     code.value = SAMPLES[sample.value];
   }
@@ -2476,20 +2471,20 @@ sample.addEventListener("change", () => {
 
 // Restore autosaved code or default sample
 (function initEditorContent() {
-  const PRESET_VERSION = "7.1";
+  const PRESET_VERSION = "8.0";
   const storedVersion = localStorage.getItem("zs_version");
   const savedSample = localStorage.getItem("zs_autosave_sample");
   const savedCode = localStorage.getItem("zs_autosave_code");
   const savedCustom = localStorage.getItem("zs_custom_code");
 
   if (storedVersion !== PRESET_VERSION) {
-    // Migrate to version 7.1: bust stale autosaved code and load clean preset
+    // Migrate to version 8.0: bust stale autosaved code and load clean preset
     localStorage.setItem("zs_version", PRESET_VERSION);
     if (savedSample && SAMPLES[savedSample]) {
       sample.value = savedSample;
     }
     if (sample.value === "Custom program") {
-      code.value = savedCustom || SAMPLES["Custom program"];
+      code.value = savedCustom !== null ? savedCustom : "";
     } else {
       code.value = SAMPLES[sample.value];
     }
@@ -2499,7 +2494,7 @@ sample.addEventListener("change", () => {
       sample.value = savedSample;
     }
     if (sample.value === "Custom program") {
-      code.value = (savedCode && savedCode.trim().length > 0) ? savedCode : (savedCustom || SAMPLES["Custom program"]);
+      code.value = savedCode !== null ? savedCode : (savedCustom !== null ? savedCustom : "");
     } else {
       code.value = (savedCode && savedCode.trim().length > 0) ? savedCode : SAMPLES[sample.value];
     }
@@ -2659,7 +2654,7 @@ const RENDER = {
   },
 
   output: (r) => {
-    const boltIcon = typeof icon === "function" ? icon("bolt", "latency-ico", 10) : `<svg class="ico latency-ico" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>`;
+    const boltIcon = `<svg class="ico latency-ico" width="11" height="11" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>`;
     const latencyBadge = r.elapsedMs !== undefined ? ` · <span class="badge latency-badge" title="Execution Latency">${boltIcon}${r.elapsedMs} ms</span>` : "";
     return (r.ok ? okBanner(`Execution finished in ${r.steps} step(s)${latencyBadge}`) : `<h3>Runtime Error</h3>` + errorList(r.errors)) +
       `<h3>Program Console (Printed Lines)</h3><pre class="console">${esc(r.output.length ? r.output.join("\n") : "(no output produced)")}</pre>` +

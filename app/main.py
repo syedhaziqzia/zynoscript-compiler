@@ -68,6 +68,8 @@ async def restore_vercel_path(request: Request, call_next):
     resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     if request.scope["path"].startswith("/api"):
         resp.headers["Cache-Control"] = "no-store"
+    elif request.scope["path"].endswith((".js", ".css", ".html")) or request.scope["path"] == "/":
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
     return resp
 
 

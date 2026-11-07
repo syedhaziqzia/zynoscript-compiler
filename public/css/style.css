@@ -3933,10 +3933,11 @@ html[data-theme="dark"] .zoom-btn:hover:not(:disabled) {
 }
 
 .badge.latency-badge .latency-ico {
-  width: 10px;
-  height: 10px;
-  fill: currentColor;
-  stroke: none;
+  width: 11px;
+  height: 11px;
+  color: #09090b !important;
+  fill: #09090b !important;
+  stroke: none !important;
   display: inline-block;
   flex-shrink: 0;
   vertical-align: -1px;
@@ -3946,6 +3947,29 @@ html[data-theme="dark"] .badge.latency-badge {
   background: rgba(56, 189, 248, 0.16);
   color: #38bdf8;
   border-color: rgba(56, 189, 248, 0.38);
+}
+
+html[data-theme="dark"] .badge.latency-badge .latency-ico {
+  color: #ffffff !important;
+  fill: #ffffff !important;
+  stroke: none !important;
+}
+
+/* 7. New Custom Program Button (no black outline or border highlight) */
+#btn-new-program,
+#btn-new-program:hover,
+#btn-new-program:focus,
+#btn-new-program:focus-visible,
+#btn-new-program:active {
+  outline: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.code-stage-wrap .code-textarea::placeholder {
+  color: #64748b;
+  -webkit-text-fill-color: #64748b;
+  opacity: 0.7;
 }
 
 

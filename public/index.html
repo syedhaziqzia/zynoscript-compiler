@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=7.1">
+  <link rel="stylesheet" href="css/style.css?v=8.0">
   <script>
     const hasAuthToken = localStorage.getItem("zs_token") || sessionStorage.getItem("zs_token");
     if (!hasAuthToken) {
@@ -165,7 +165,7 @@
           </div>
           <div class="pane-header-right">
             <button id="btn-new-program" class="btn ghost small" type="button" title="Start a fresh blank custom program">
-              <span data-icon="plus"></span> New
+              <span data-icon="plus"><svg class="ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;display:inline-block;flex-shrink:0;" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span> New
             </button>
             <div class="inline-select">
               <span class="select-label" id="sample-label">Preset:</span>
@@ -183,7 +183,7 @@
             <div id="gutter" class="code-gutter" aria-hidden="true">1</div>
             <div class="code-stage-wrap">
               <pre id="code-highlight" class="code-highlight" aria-hidden="true"></pre>
-              <textarea id="code" class="code-textarea" spellcheck="false" aria-label="ZynoScript source code"></textarea>
+              <textarea id="code" class="code-textarea" spellcheck="false" placeholder="// Write your custom ZynoScript code here..." aria-label="ZynoScript source code"></textarea>
             </div>
           </div>
           <footer class="pane-footer editor-footer">
@@ -635,9 +635,9 @@ let flag ok := 1 as~ flag              // 1 -> true</pre>
   <div id="toast" class="toast" role="status" hidden></div>
 
   <!-- Scripts -->
-  <script defer src="js/icons.js?v=7.1"></script>
-  <script defer src="js/samples.js?v=7.1"></script>
-  <script defer src="js/api.js?v=7.1"></script>
-  <script defer src="js/app.js?v=7.1"></script>
+  <script defer src="js/icons.js?v=8.0"></script>
+  <script defer src="js/samples.js?v=8.0"></script>
+  <script defer src="js/api.js?v=8.0"></script>
+  <script defer src="js/app.js?v=8.0"></script>
 </body>
 </html>
