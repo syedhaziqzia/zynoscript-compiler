@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="https://zynoscript-compiler.vercel.app"><img src="https://img.shields.io/badge/Live%20Demo-Vercel-black?logo=vercel&logoColor=white" alt="Live Demo"/></a>
-  <a href="#-running-the-test-suite"><img src="https://img.shields.io/badge/Tests-48%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
+  <a href="#-running-the-test-suite"><img src="https://img.shields.io/badge/Tests-49%20passing-success?logo=pytest&logoColor=white" alt="Tests"/></a>
   <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.110%2B-009688?logo=fastapi&logoColor=white" alt="FastAPI"/></a>
   <a href="https://neon.tech"><img src="https://img.shields.io/badge/Database-Neon%20Postgres-00E599?logo=postgresql&logoColor=white" alt="Neon Postgres"/></a>
   <a href="https://www.python.org"><img src="https://img.shields.io/badge/Python-3.12%2B-blue?logo=python&logoColor=white" alt="Python Version"/></a>
@@ -29,19 +29,19 @@
 
 ## 👥 Authors & Group Members
 
-This project was developed for our **Compiler Construction Lab Project**:
-
-* **Compiler Engine & Core Grammar Lead:**  
-  👉 **[Syed Abdul Ali Naqvi](https://github.com/SyedAbdulAliNaqvi)**  
-Developed core compiler stages, lexical tokenization, recursive-descent syntax parsing, semantic verification rules, Intermediate Code Generation (Three-Address Code & Quadruple tables), and language specifications.
+This project was developed for **CS-554: Compiler Construction**:
 
 * **Team Lead & Full-Stack Architect:**  
-  👉 **[Syed Haziq Zia](https://github.com/syedhaziqzia)**  
+  👉 **[Syed Haziq Zia Naqvi](https://github.com/syedhaziqzia)** — `EB24210006102`  
   Overall project leadership, backend architecture & REST APIs, cloud database systems (dual SQLite / Neon PostgreSQL), security hardening, interactive laboratory workbench UI/UX, and Vercel cloud deployment.
 
 * **Quality Assurance & Verification Specialist:**  
-  👉 **[Muhammad Noman](https://github.com/Noman-exe)**  
+  👉 **[Muhammad Noman](https://github.com/Noman-exe)** — `EB24210006067`  
   Conducted pipeline testing, cross-stage integration verification, syntax error boundary checks, and test suite execution to ensure compiler stability and compliance.
+
+* **Compiler Engine & Core Grammar Lead:**  
+  👉 **[Syed Abdul Ali Naqvi](https://github.com/SyedAbdulAliNaqvi)** — `EB24210006092`  
+  Developed core compiler stages, lexical tokenization, recursive-descent syntax parsing, semantic verification rules, Intermediate Code Generation (Three-Address Code & Quadruple tables), and language specifications.
 
 ---
 
@@ -101,25 +101,25 @@ Every stage lives in [`app/engines/`](app/engines/) as an independent pure Pytho
 
 ## 💻 ZynoScript Syntax Quick Reference
 
-Every valid ZynoScript program must conclude with `halt;`:
+Every valid ZynoScript program must conclude with `halt`:
 
 ```zynoscript
 /~~ ZynoScript Example:
     Demonstrates loops, branching, comments, and explicit type casting (as~). ~~/
-let whole counter := 1;
-let whole maxLimit := 5;
+let whole counter := 1
+let whole maxLimit := 5
 
 spin (counter <<= maxLimit) {
     whenTrue (counter ~= 3) {
-        beam "Three reached!";
+        beam "Three reached!"
     } elseWay {
-        beam "Step: " +~ (counter as~ phrase); // cast whole -> phrase
+        beam "Step: " +~ (counter as~ phrase) // cast whole -> phrase
     }
-    counter := counter +~ 1;
+    counter := counter +~ 1
 }
 
-beam "Execution complete.";
-halt;
+beam "Execution complete."
+halt
 ```
 
 * **Data Types:** `whole` (int), `part` (float), `phrase` (str), `flag` (bool), `mark` (char)
@@ -127,7 +127,7 @@ halt;
 * **Comments:** Single-line `// ...` and multi-line block comments `/~~ ... ~~/`
 * **Conditions & Loops:** `whenTrue (condition) { ... } elseWay { ... }`, `spin (condition) { ... }`
 * **Operators:** `+~` (Math & `phrase` concatenation), `-~`, `*~`, `/~` | `=>>`, `<<=`, `~=`, `~!` (Comparison) | `&&~`, `||~`, `!~` (Logical)
-* **Print & Finish:** `beam <expression>;` | `halt;`
+* **Print & Finish:** `beam <expression>` | `halt` (statements are line-delimited; semicolons `;` are optional)
 
 ---
 
@@ -138,7 +138,7 @@ halt;
 * **Shortcuts & Quick Actions Hub (`?`):** One-click topbar modal combining keyboard shortcut references (`Ctrl+Enter`, `Ctrl+K`, `Tab`, `?`, `Esc`), mouse tips, and instant studio triggers.
 * **Inline Error Diagnostics & Gutter Jump:** Highlights offending lines in the editor gutter and displays clean diagnostic rows that jump straight to the exact source line on click.
 * **Resizable Desktop Split & Mobile Workbench Tabs:** Drag the center divider on desktop to resize the editor/output split (double-click to reset 50/50), or switch cleanly between `Code Editor` and `Compiler Output` tabs on mobile screens.
-* **26 Built-In Preset Programs:** Includes **22 working programs** (star pyramids, diamond patterns, prime checker, palindrome, FizzBuzz, Euclidean GCD/LCM, Collatz `3n+1`, binary converter, ASCII Caesar cipher, type casting, and grade calculator) plus **4 dedicated stage error presets** (`Lexical errors`, `Syntax error: missing ;`, `Semantic errors`, and `Runtime error: division by zero`).
+* **26 Built-In Preset Programs:** Includes **22 working programs** (star pyramids, diamond patterns, prime checker, palindrome, FizzBuzz, Euclidean GCD/LCM, Collatz `3n+1`, binary converter, ASCII Caesar cipher, type casting, and grade calculator) plus **4 dedicated stage error presets** (`Lexical errors`, `Syntax error: incomplete statement`, `Semantic errors`, and `Runtime error: division by zero`).
 
 ---
 

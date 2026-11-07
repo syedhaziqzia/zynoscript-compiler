@@ -106,18 +106,18 @@ def bnf(g: dict) -> str:
     k, o = g["keywords"], g["operators"]
     cast_op = o.get("CAST", "as~")
     types = " | ".join(f"'{k[r]}'" for r in TYPE_OF_ROLE)
-    return f"""program    -> stmt_list '{k['HALT']}' ';' EOF
+    return f"""program    -> stmt_list '{k['HALT']}' [ ';' ] EOF
 stmt_list  -> stmt stmt_list | epsilon
 stmt       -> decl | assign | if_stmt | while_stmt | print_stmt
-decl       -> '{k['LET']}' type ID ';'
-            | '{k['LET']}' type ID '{o['ASSIGN']}' expr ';'
-            | '{k['LET']}' ID '{o['ASSIGN']}' expr ';'          (type taken from the value)
+decl       -> '{k['LET']}' type ID [ ';' ]
+            | '{k['LET']}' type ID '{o['ASSIGN']}' expr [ ';' ]
+            | '{k['LET']}' ID '{o['ASSIGN']}' expr [ ';' ]          (type taken from the value)
 type       -> {types}
-assign     -> ID '{o['ASSIGN']}' expr ';'
+assign     -> ID '{o['ASSIGN']}' expr [ ';' ]
 if_stmt    -> '{k['IF']}' expr block
             | '{k['IF']}' expr block '{k['ELSE']}' block
 while_stmt -> '{k['WHILE']}' expr block
-print_stmt -> '{k['PRINT']}' expr ';'
+print_stmt -> '{k['PRINT']}' expr [ ';' ]
 block      -> '{{' stmt_list '}}' | stmt                  (braces optional for one statement)
 expr       -> or_expr
 or_expr    -> and_expr {{ '{o['OR']}' and_expr }}

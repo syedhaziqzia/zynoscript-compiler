@@ -56,7 +56,7 @@ class ApiTests(unittest.TestCase):
             self.assertTrue(r["results"][stage]["ok"], stage)
 
     def test_syntax_error_blocks_later_stages(self):
-        r = self.client.post("/api/compile/icg", json={"source": "let whole a := 5\nhalt;"}, headers=self.ali).json()
+        r = self.client.post("/api/compile/icg", json={"source": "let whole a := 10 +~\nhalt"}, headers=self.ali).json()
         self.assertEqual(r["blocked_by"], "syntax")
         self.assertNotIn("semantic", r["results"])
 

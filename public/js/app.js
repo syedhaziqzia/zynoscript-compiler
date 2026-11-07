@@ -274,7 +274,7 @@ function zsRunSyntax(tokens, rawGrammar) {
 
   function program() {
     const body = stmtList();
-    match("HALT"); match("SEMI"); match("EOF");
+    match("HALT"); accept("SEMI"); match("EOF");
     return body;
   }
 
@@ -299,7 +299,7 @@ function zsRunSyntax(tokens, rawGrammar) {
         }
         i += 1;
         const init = expr();
-        match("SEMI");
+        accept("SEMI");
         return { node: "decl", type: "auto", name, init, line };
       }
       if (!(ttok.kind in ZS_TYPE_OF_ROLE)) {
@@ -309,14 +309,14 @@ function zsRunSyntax(tokens, rawGrammar) {
       i += 1;
       const name = match("ID").lexeme;
       const init = accept("ASSIGN") ? expr() : null;
-      match("SEMI");
+      accept("SEMI");
       return { node: "decl", type: ZS_TYPE_OF_ROLE[ttok.kind], name, init, line };
     }
     if (kind === "ID") {
       i += 1;
       match("ASSIGN");
       const value = expr();
-      match("SEMI");
+      accept("SEMI");
       return { node: "assign", name: tok.lexeme, value, line };
     }
     if (kind === "IF" || kind === "WHILE") {
@@ -330,7 +330,7 @@ function zsRunSyntax(tokens, rawGrammar) {
     if (kind === "PRINT") {
       i += 1;
       const value = expr();
-      match("SEMI");
+      accept("SEMI");
       return { node: "print", value, line };
     }
     fail(tok, `a statement cannot start with '${tok.lexeme}'`);
@@ -2108,7 +2108,7 @@ function renderGrammar() {
       </div>
       <pre class="code bnf-code-view">${esc(state.grammar.bnf)}</pre>
       <div class="grammar-rules-footer">
-        <p class="muted text-small">Every statement ends with a semicolon <code>;</code>. Programs terminate with <code>halt;</code>. Comments: <code>// line</code> and <code>/~~ block ~~/</code> are ignored by the compiler.</p>
+        <p class="muted text-small">Statements are line-separated; semicolons <code>;</code> are optional. Programs terminate with <code>halt</code>. Comments: <code>// line</code> and <code>/~~ block ~~/</code> are ignored by the compiler.</p>
       </div>`;
     const btnCopy = $("#btn-copy-bnf");
     if (btnCopy) {
@@ -2856,9 +2856,9 @@ function renderGuide() {
   $("#guide-types").innerHTML = table(["Type", "Standard Equivalent", "ZynoScript Keyword"], TYPES.map((r) => [kr[r].replace("Type: ", ""), NORMAL_T[r], g.keywords[r]]), [1, 2]);
   $("#guide-bnf").textContent = state.grammar.bnf;
   const k = g.keywords, o = g.operators;
-  $("#gd-halt").textContent = `${k.HALT};`;
-  $("#gd-decl1").textContent = `${k.LET} ${k.INT} a ${o.ASSIGN} 5;`;
-  $("#gd-decl2").textContent = `${k.LET} x ${o.ASSIGN} 5;`;
+  $("#gd-halt").textContent = `${k.HALT}`;
+  $("#gd-decl1").textContent = `${k.LET} ${k.INT} a ${o.ASSIGN} 5`;
+  $("#gd-decl2").textContent = `${k.LET} x ${o.ASSIGN} 5`;
   if ($("#gd-cast")) $("#gd-cast").textContent = `x ${o.CAST || "as~"} ${k.INT}`;
 }
 
@@ -3323,11 +3323,11 @@ function getCommands() {
     {
       id: "sample-syntax-errors",
       group: "Sample Programs",
-      name: "Load Missing Semicolon Test",
+      name: "Load Incomplete Statement Test",
       desc: "Test reporting syntax errors on line 2",
       icon: "alert",
       action: () => {
-        sample.value = "Syntax error: missing ;";
+        sample.value = "Syntax error: incomplete statement";
         code.value = SAMPLES[sample.value];
         updateGutter();
         resetStates();

@@ -133,7 +133,7 @@ process.stdout.write(JSON.stringify(out));
         js_bundle = json.loads(proc.stdout)
         self.assertGreaterEqual(len(js_bundle), 8)
 
-        error_presets = {"Lexical errors", "Syntax error: missing ;", "Semantic errors"}
+        error_presets = {"Lexical errors", "Syntax error: incomplete statement", "Semantic errors"}
         runtime_error_presets = {"Runtime error: division by zero"}
         for name, item in js_bundle.items():
             code = item["code"]
@@ -176,10 +176,14 @@ process.stdout.write(JSON.stringify(out));
         self.assertEqual(ast[0]["init"]["op"], "ADD")
         self.assertEqual(ast[0]["init"]["right"]["op"], "MUL")
 
-    def test_parser_missing_semicolon(self):
-        r = syntax.run(lexical.run("let whole a := 5\nhalt;", G)["tokens"], G)
+    def test_parser_incomplete_statement(self):
+        r = syntax.run(lexical.run("let whole a := 5\nlet whole b := 10 +~\nhalt", G)["tokens"], G)
         self.assertFalse(r["ok"])
-        self.assertEqual(r["errors"][0]["line"], 2)
+        self.assertEqual(r["errors"][0]["line"], 3)
+
+    def test_semicolons_optional(self):
+        r = syntax.run(lexical.run("let whole a := 5\nlet whole b := 10;\nhalt", G)["tokens"], G)
+        self.assertTrue(r["ok"])
 
     def test_semantic_rules(self):
         src = 'let whole a := 5;\nlet whole a := 7;\nlet flag f := 3;\nwhenTrue (a) {\n}\nhalt;'
@@ -187,7 +191,7 @@ process.stdout.write(JSON.stringify(out));
         self.assertEqual(rules, [1, 3, 6])
 
     def test_handout_syntax_untyped_and_no_braces(self):
-        ast = ast_of('let x := 5;\nlet y := 10;\nwhenTrue x <<= y\n    beam "small";\nelseWay\n    beam "big";\nhalt;')
+        ast = ast_of('let x := 5\nlet y := 10\nwhenTrue x <<= y\n    beam "small"\nelseWay\n    beam "big"\nhalt')
         self.assertEqual(ast[0]["type"], "auto")
         sem = semantic.run(ast, G)
         self.assertTrue(sem["ok"])

@@ -99,13 +99,13 @@
             <span class="hero-code-dot"></span>
             <span class="hero-code-title">handout_example.zs</span>
           </div>
-          <pre class="hero-code"><span class="k">let</span> x <span class="o">:=</span> 5;
-<span class="k">let</span> y <span class="o">:=</span> 10;
+          <pre class="hero-code"><span class="k">let</span> x <span class="o">:=</span> 5
+<span class="k">let</span> y <span class="o">:=</span> 10
 <span class="k">whenTrue</span> x <span class="o">&lt;&lt;=</span> y
-    <span class="k">beam</span> <span class="s">"x is smaller"</span>;
+    <span class="k">beam</span> <span class="s">"x is smaller"</span>
 <span class="k">elseWay</span>
-    <span class="k">beam</span> <span class="s">"y is smaller or equal"</span>;
-<span class="k">halt</span>;</pre>
+    <span class="k">beam</span> <span class="s">"y is smaller or equal"</span>
+<span class="k">halt</span></pre>
         </div>
       </section>
 
@@ -308,10 +308,10 @@
           <header class="card-header"><h3>Syntax & Grammar Rules</h3></header>
           <div class="card-body">
             <ul class="rules-list">
-              <li>Every statement ends with a semicolon <code>;</code></li>
-              <li>Every complete program concludes with <code id="gd-halt">halt;</code></li>
-              <li>Variables can be explicitly typed: <code id="gd-decl1">let whole a := 5;</code></li>
-              <li>Variables can also be inferred from values: <code id="gd-decl2">let x := 5;</code></li>
+              <li>Statements are line-delimited (semicolons <code>;</code> are optional)</li>
+              <li>Every complete program concludes with <code id="gd-halt">halt</code></li>
+              <li>Variables can be explicitly typed: <code id="gd-decl1">let whole a := 5</code></li>
+              <li>Variables can also be inferred from values: <code id="gd-decl2">let x := 5</code></li>
               <li>Conditional statements support optional parentheses around conditions: <code>whenTrue x &lt;&lt;= y</code></li>
               <li>Single statements can be written with or without enclosing braces <code>{ }</code></li>
               <li>Explicit type casting uses <code id="gd-cast">x as~ whole</code> (converts between <code>whole</code>, <code>part</code>, <code>phrase</code>, <code>flag</code>, and <code>mark</code>).</li>
@@ -326,13 +326,13 @@
           <header class="card-header"><h3>Comments (<code>//</code> &amp; <code>/~~ ... ~~/</code>)</h3></header>
           <div class="card-body">
             <pre class="code">// single-line comment: ignored until end of line
-let whole total := 10;   // trailing comment after code
+let whole total := 10   // trailing comment after code
 
 /~~ multi-line block comment:
     begins with /~~ and spans multiple lines
     until closed with ~~/
-beam total;
-halt;</pre>
+beam total
+halt</pre>
             <p class="muted text-small">Custom operators may not contain <code>//</code>, <code>/~~</code>, or <code>~~/</code>, so comments always stay unambiguous.</p>
           </div>
         </section>
@@ -340,12 +340,12 @@ halt;</pre>
         <section class="card-panel">
           <header class="card-header"><h3>Explicit Type Casting (<code>as~</code>)</h3></header>
           <div class="card-body">
-            <pre class="code" id="guide-cast-code">let part rate := 19.75;
-let whole units := rate as~ whole;      // 19.75 -> 19
-let phrase label := units as~ phrase;   // 19 -> "19"
-let whole parsed := "42" as~ whole;     // "42" -> 42
-let mark grade := 65 as~ mark;          // 65 -> 'A'
-let flag ok := 1 as~ flag;              // 1 -> true</pre>
+            <pre class="code" id="guide-cast-code">let part rate := 19.75
+let whole units := rate as~ whole      // 19.75 -> 19
+let phrase label := units as~ phrase   // 19 -> "19"
+let whole parsed := "42" as~ whole     // "42" -> 42
+let mark grade := 65 as~ mark          // 65 -> 'A'
+let flag ok := 1 as~ flag              // 1 -> true</pre>
             <p class="muted text-small">Supported casts: <code>whole &harr; part</code>, <code>any &rarr; phrase</code>, <code>phrase &rarr; whole/part</code> (checked at runtime), <code>flag &harr; whole</code> (0/1), and <code>mark &harr; whole</code> (character code).</p>
           </div>
         </section>

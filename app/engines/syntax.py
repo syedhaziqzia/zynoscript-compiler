@@ -39,10 +39,10 @@ class Parser:
             return True
         return False
 
-    # program -> stmt_list HALT ';' EOF
+    # program -> stmt_list HALT [ ';' ] EOF
     def program(self):
         body = self.stmt_list()
-        self.match("HALT"); self.match("SEMI"); self.match("EOF")
+        self.match("HALT"); self.accept("SEMI"); self.match("EOF")
         return body
 
     def stmt_list(self):
@@ -57,13 +57,13 @@ class Parser:
         if kind == "LET":
             self.i += 1
             ttok = self.cur
-            if ttok["kind"] == "ID":                     # untyped: let x := 5;  (type inferred from the value)
+            if ttok["kind"] == "ID":                     # untyped: let x := 5  (type inferred from the value)
                 name = self.match("ID")["lexeme"]
                 if self.cur["kind"] != "ASSIGN":
                     raise ParseError(self.cur, f"'{name}' has no type, so it needs a value: {lexeme(self.g, 'LET')} {name} {lexeme(self.g, 'ASSIGN')} ...")
                 self.i += 1
                 init = self.expr()
-                self.match("SEMI")
+                self.accept("SEMI")
                 return {"node": "decl", "type": "auto", "name": name, "init": init, "line": line}
             if ttok["kind"] not in TYPE_OF_ROLE:
                 kinds = ", ".join(lexeme(self.g, r) for r in TYPE_OF_ROLE)
@@ -71,13 +71,13 @@ class Parser:
             self.i += 1
             name = self.match("ID")["lexeme"]
             init = self.expr() if self.accept("ASSIGN") else None
-            self.match("SEMI")
+            self.accept("SEMI")
             return {"node": "decl", "type": TYPE_OF_ROLE[ttok["kind"]], "name": name, "init": init, "line": line}
         if kind == "ID":
             self.i += 1
             self.match("ASSIGN")
             value = self.expr()
-            self.match("SEMI")
+            self.accept("SEMI")
             return {"node": "assign", "name": tok["lexeme"], "value": value, "line": line}
         if kind in ("IF", "WHILE"):
             self.i += 1
@@ -90,7 +90,7 @@ class Parser:
         if kind == "PRINT":
             self.i += 1
             value = self.expr()
-            self.match("SEMI")
+            self.accept("SEMI")
             return {"node": "print", "value": value, "line": line}
         raise ParseError(tok, f"a statement cannot start with '{tok['lexeme']}'")
 
