@@ -1059,6 +1059,22 @@ function showView(name) {
   if (typeof toggleProfileDropdown === "function") toggleProfileDropdown(false);
   const topbar = $("#topbar");
   if (topbar) topbar.hidden = name === "auth";
+
+  // The auth / welcome page is strictly single theme (clean light theme)
+  if (name === "auth") {
+    document.documentElement.removeAttribute("data-theme");
+  } else {
+    // Restore user's saved studio theme preference when inside logged-in views
+    try {
+      if (localStorage.getItem("zs_theme") === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+      } else {
+        document.documentElement.removeAttribute("data-theme");
+      }
+      if (typeof syncThemeToggleIcon === "function") syncThemeToggleIcon();
+    } catch {}
+  }
+
   for (const v of ["auth", "workbench", "guide", "activity", "admin"]) {
     const el = $(`#${v}-view`);
     if (!el) continue;
@@ -1152,6 +1168,16 @@ async function enterApp(user) {
   if ($("#btn-theme-toggle")) $("#btn-theme-toggle").hidden = false;
   $("#nav-admin").hidden = $("#log-user").hidden = !isAdmin;
 
+  // Restore user's saved studio theme preference when logging in
+  try {
+    if (localStorage.getItem("zs_theme") === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+    }
+    if (typeof syncThemeToggleIcon === "function") syncThemeToggleIcon();
+  } catch {}
+
   // Immediately render workbench so refresh and login feel instantaneous
   showView("workbench");
   if (typeof toggleProfileDropdown === "function") toggleProfileDropdown(false);
@@ -1180,6 +1206,7 @@ function leaveApp(message) {
   $("#nav-admin").hidden = $("#log-user").hidden = true;
   toggleProfileDropdown(false);
   closeGrammarDrawer();
+  document.documentElement.removeAttribute("data-theme");
   showView("auth");
   if (message) renderAuthError(message);
 }

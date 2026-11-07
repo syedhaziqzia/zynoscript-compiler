@@ -9,12 +9,13 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=6.4">
+  <link rel="stylesheet" href="css/style.css?v=6.5">
   <script>
-    if (!localStorage.getItem("zs_token") && !sessionStorage.getItem("zs_token")) {
+    const hasAuthToken = localStorage.getItem("zs_token") || sessionStorage.getItem("zs_token");
+    if (!hasAuthToken) {
       document.documentElement.classList.add("show-auth-immediately");
-    }
-    if (localStorage.getItem("zs_theme") === "dark") {
+      document.documentElement.removeAttribute("data-theme");
+    } else if (localStorage.getItem("zs_theme") === "dark") {
       document.documentElement.setAttribute("data-theme", "dark");
     }
   </script>
@@ -113,18 +114,21 @@
           <h2 class="auth-title">Welcome</h2>
           <p class="muted">Sign in to save your custom grammar and access logs.</p>
         </div>
-        <div class="seg auth-seg" role="tablist">
+        <div class="seg auth-seg" role="tablist" aria-label="Authentication Options">
           <button class="tab is-active" data-mode="login" role="tab" id="tab-login">Sign in</button>
           <button class="tab" data-mode="register" role="tab" id="tab-register">Create account</button>
         </div>
         <form id="auth-form" autocomplete="on">
-          <label>Username
+          <div class="auth-field">
+            <label for="auth-user">Username</label>
             <input id="auth-user" required minlength="3" maxlength="32" autocomplete="username" placeholder="Enter username">
-          </label>
-          <label for="auth-pass">Password</label>
-          <div class="pw-wrap">
-            <input id="auth-pass" type="password" required minlength="6" autocomplete="current-password" placeholder="At least 6 characters">
-            <button type="button" id="pw-toggle" class="pw-toggle" aria-pressed="false" aria-controls="auth-pass">Show</button>
+          </div>
+          <div class="auth-field">
+            <label for="auth-pass">Password</label>
+            <div class="pw-wrap">
+              <input id="auth-pass" type="password" required minlength="6" autocomplete="current-password" placeholder="At least 6 characters">
+              <button type="button" id="pw-toggle" class="pw-toggle" aria-pressed="false" aria-controls="auth-pass">Show</button>
+            </div>
           </div>
           <label class="check">
             <input type="checkbox" id="auth-remember">
