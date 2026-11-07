@@ -9,6 +9,11 @@ elseWay
     beam "y is smaller or equal"
 halt
 `,
+  "Custom program": `// Custom ZynoScript Program
+let whole x := 10
+beam x
+halt
+`,
   "Working program": `/~~ Working program
     Shows every data type, arithmetic,
     an if/else and a loop. ~~/

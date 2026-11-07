@@ -3932,6 +3932,16 @@ html[data-theme="dark"] .zoom-btn:hover:not(:disabled) {
   vertical-align: middle;
 }
 
+.badge.latency-badge .latency-ico {
+  width: 10px;
+  height: 10px;
+  fill: currentColor;
+  stroke: none;
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: -1px;
+}
+
 html[data-theme="dark"] .badge.latency-badge {
   background: rgba(56, 189, 248, 0.16);
   color: #38bdf8;

@@ -2382,6 +2382,9 @@ function updateGutter() {
     try {
       localStorage.setItem("zs_autosave_code", code.value);
       localStorage.setItem("zs_autosave_sample", sample.value);
+      if (sample.value === "Custom program") {
+        localStorage.setItem("zs_custom_code", code.value);
+      }
     } catch {}
   }, 250);
 }
@@ -2420,8 +2423,50 @@ code.addEventListener("keydown", (e) => {
 const sample = $("#sample");
 sample.innerHTML = Object.keys(SAMPLES).map((k) => `<option>${esc(k)}</option>`).join("");
 enhanceSelect(sample);
+
+async function startNewCustomProgram(forceFresh = false) {
+  const starter = `// Custom ZynoScript Program\nlet whole x := 10\nbeam x\nhalt\n`;
+  if (forceFresh && code.value.trim() && code.value.trim() !== starter.trim() && sample.value === "Custom program") {
+    if (typeof ask === "function") {
+      const ok = await ask({
+        title: "Start Fresh Custom Program?",
+        text: "This will reset your editor with a clean custom program template.",
+        confirm: "Start Fresh"
+      });
+      if (!ok) return;
+    }
+  }
+  sample.value = "Custom program";
+  if (sample._enhanced && typeof sample._enhanced.syncValue === "function") {
+    sample._enhanced.syncValue();
+  }
+  code.value = starter;
+  try {
+    localStorage.setItem("zs_custom_code", starter);
+    localStorage.setItem("zs_autosave_code", starter);
+    localStorage.setItem("zs_autosave_sample", "Custom program");
+  } catch {}
+  activeErrorLines.clear();
+  renderGutterNow(true);
+  updateGutter();
+  resetStates();
+  code.focus();
+  code.setSelectionRange(code.value.length, code.value.length);
+  toast("Started fresh custom program");
+}
+
+const btnNewProgram = $("#btn-new-program");
+if (btnNewProgram) {
+  btnNewProgram.addEventListener("click", () => startNewCustomProgram(true));
+}
+
 sample.addEventListener("change", () => {
-  code.value = SAMPLES[sample.value];
+  if (sample.value === "Custom program") {
+    const savedCustom = localStorage.getItem("zs_custom_code");
+    code.value = (savedCustom && savedCustom.trim().length > 0) ? savedCustom : SAMPLES["Custom program"];
+  } else {
+    code.value = SAMPLES[sample.value];
+  }
   activeErrorLines.clear();
   renderGutterNow(true);
   updateGutter();
@@ -2431,24 +2476,36 @@ sample.addEventListener("change", () => {
 
 // Restore autosaved code or default sample
 (function initEditorContent() {
-  const PRESET_VERSION = "7.0";
+  const PRESET_VERSION = "7.1";
   const storedVersion = localStorage.getItem("zs_version");
   const savedSample = localStorage.getItem("zs_autosave_sample");
   const savedCode = localStorage.getItem("zs_autosave_code");
+  const savedCustom = localStorage.getItem("zs_custom_code");
 
   if (storedVersion !== PRESET_VERSION) {
-    // Migrate to version 7.0: bust stale autosaved code and load clean preset
+    // Migrate to version 7.1: bust stale autosaved code and load clean preset
     localStorage.setItem("zs_version", PRESET_VERSION);
     if (savedSample && SAMPLES[savedSample]) {
       sample.value = savedSample;
     }
-    code.value = SAMPLES[sample.value];
+    if (sample.value === "Custom program") {
+      code.value = savedCustom || SAMPLES["Custom program"];
+    } else {
+      code.value = SAMPLES[sample.value];
+    }
     localStorage.setItem("zs_autosave_code", code.value);
   } else {
     if (savedSample && SAMPLES[savedSample]) {
       sample.value = savedSample;
     }
-    code.value = (savedCode && savedCode.trim().length > 0) ? savedCode : SAMPLES[sample.value];
+    if (sample.value === "Custom program") {
+      code.value = (savedCode && savedCode.trim().length > 0) ? savedCode : (savedCustom || SAMPLES["Custom program"]);
+    } else {
+      code.value = (savedCode && savedCode.trim().length > 0) ? savedCode : SAMPLES[sample.value];
+    }
+  }
+  if (sample._enhanced && typeof sample._enhanced.syncValue === "function") {
+    sample._enhanced.syncValue();
   }
   renderGutterNow(true);
   updateSyntaxHighlight();
@@ -2602,7 +2659,8 @@ const RENDER = {
   },
 
   output: (r) => {
-    const latencyBadge = r.elapsedMs !== undefined ? ` · <span class="badge latency-badge" title="Execution Latency">⚡ ${r.elapsedMs} ms</span>` : "";
+    const boltIcon = typeof icon === "function" ? icon("bolt", "latency-ico", 10) : `<svg class="ico latency-ico" width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>`;
+    const latencyBadge = r.elapsedMs !== undefined ? ` · <span class="badge latency-badge" title="Execution Latency">${boltIcon}${r.elapsedMs} ms</span>` : "";
     return (r.ok ? okBanner(`Execution finished in ${r.steps} step(s)${latencyBadge}`) : `<h3>Runtime Error</h3>` + errorList(r.errors)) +
       `<h3>Program Console (Printed Lines)</h3><pre class="console">${esc(r.output.length ? r.output.join("\n") : "(no output produced)")}</pre>` +
       `<h3>Final Variable State</h3>` + (r.variables.length ? table(["Variable", "Value"], r.variables.map((v) => [v.name, v.value]), [1]) : `<p class="empty text-muted">No active variables.</p>`);
@@ -3213,6 +3271,17 @@ function getCommands() {
 
     // Code Samples & Handout
     {
+      id: "sample-custom",
+      group: "Sample Programs",
+      name: "New Blank Custom Program",
+      desc: "Start a fresh custom ZynoScript program to write your own code",
+      icon: "plus",
+      action: () => {
+        startNewCustomProgram(false);
+        showView("workbench");
+      },
+    },
+    {
       id: "sample-handout",
       group: "Sample Programs",
       name: "Load Handout Example (If/Else)",
@@ -3220,6 +3289,7 @@ function getCommands() {
       icon: "file",
       action: () => {
         sample.value = "Lab handout example";
+        if (sample._enhanced && typeof sample._enhanced.syncValue === "function") sample._enhanced.syncValue();
         code.value = SAMPLES[sample.value];
         updateGutter();
         resetStates();
