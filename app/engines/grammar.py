@@ -128,6 +128,6 @@ arith      -> term {{ ('{o['ADD']}' | '{o['SUB']}') term }}
 term       -> cast_expr {{ ('{o['MUL']}' | '{o['DIV']}') cast_expr }}
 cast_expr  -> factor {{ '{cast_op}' type }}                 (explicit type cast, e.g. x {cast_op} {k['INT']})
 factor     -> NUM | DEC | STR | CHR | '{k['TRUE']}' | '{k['FALSE']}' | ID
-            | '(' expr ')' | '{o['NOT']}' factor
+            | '(' expr ')' | '{o['NOT']}' factor | '{o['SUB']}' factor
 comment    -> '//' any text to end of line            (single-line comment, ignored)
             | '/~~' any text across lines '~~/'       (multi-line block comment, ignored)"""

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=8.0">
+  <link rel="stylesheet" href="css/style.css?v=8.1">
   <script>
     const hasAuthToken = localStorage.getItem("zs_token") || sessionStorage.getItem("zs_token");
     if (!hasAuthToken) {
@@ -323,6 +323,7 @@
               <li>Every complete program concludes with <code id="gd-halt">halt</code></li>
               <li>Variables can be explicitly typed: <code id="gd-decl1">let whole a := 5</code></li>
               <li>Variables can also be inferred from values: <code id="gd-decl2">let x := 5</code></li>
+              <li>Unary negation uses <code id="gd-neg">-~</code> before numeric values: <code>let whole n := -~ 5</code></li>
               <li>Conditional statements support optional parentheses around conditions: <code>whenTrue x &lt;&lt;= y</code></li>
               <li>Single statements can be written with or without enclosing braces <code>{ }</code></li>
               <li>Explicit type casting uses <code id="gd-cast">x as~ whole</code> (converts between <code>whole</code>, <code>part</code>, <code>phrase</code>, <code>flag</code>, and <code>mark</code>).</li>
@@ -635,9 +636,9 @@ let flag ok := 1 as~ flag              // 1 -> true</pre>
   <div id="toast" class="toast" role="status" hidden></div>
 
   <!-- Scripts -->
-  <script defer src="js/icons.js?v=8.0"></script>
-  <script defer src="js/samples.js?v=8.0"></script>
-  <script defer src="js/api.js?v=8.0"></script>
-  <script defer src="js/app.js?v=8.0"></script>
+  <script defer src="js/icons.js?v=8.1"></script>
+  <script defer src="js/samples.js?v=8.1"></script>
+  <script defer src="js/api.js?v=8.1"></script>
+  <script defer src="js/app.js?v=8.1"></script>
 </body>
 </html>

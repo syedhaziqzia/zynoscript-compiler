@@ -2420,12 +2420,37 @@ code.addEventListener("keydown", (e) => {
   updateGutter();
 });
 
+const CUSTOM_PROGRAM_NAME = "Custom program";
 const sample = $("#sample");
-sample.innerHTML = Object.keys(SAMPLES).map((k) => `<option>${esc(k)}</option>`).join("");
+const uniqueSampleKeys = Array.from(new Set(Object.keys(SAMPLES)));
+sample.innerHTML = uniqueSampleKeys.map((k) => `<option>${esc(k)}</option>`).join("");
 enhanceSelect(sample);
 
+function clearOutputPanel() {
+  resetStates();
+  state.lastResults = null;
+  activeErrorLines.clear();
+  renderGutterNow(true);
+  const outTitle = $("#out-title");
+  const outStatus = $("#out-status");
+  const outputEl = $("#output");
+  const clearBtn = $("#btn-clear-output");
+  const copyBtn = $("#btn-copy-output");
+  if (outTitle) outTitle.textContent = "Compiler Output";
+  if (outStatus) outStatus.hidden = true;
+  if (clearBtn) clearBtn.hidden = true;
+  if (copyBtn) copyBtn.hidden = true;
+  if (outputEl) {
+    outputEl.innerHTML = `<div class="empty-state out-anim">
+      <div class="empty-glyph">${typeof icon === "function" ? icon("braces") : ""}</div>
+      <p>Pick a compiler stage above or hit <b>Run All</b> to analyze and run your code.</p>
+    </div>`;
+  }
+}
+
 function startNewCustomProgram() {
-  sample.value = "Custom program";
+  // Enforce single custom program slot at all times
+  sample.value = CUSTOM_PROGRAM_NAME;
   if (sample._enhanced && typeof sample._enhanced.syncValue === "function") {
     sample._enhanced.syncValue();
   }
@@ -2433,12 +2458,10 @@ function startNewCustomProgram() {
   try {
     localStorage.setItem("zs_custom_code", "");
     localStorage.setItem("zs_autosave_code", "");
-    localStorage.setItem("zs_autosave_sample", "Custom program");
+    localStorage.setItem("zs_autosave_sample", CUSTOM_PROGRAM_NAME);
   } catch {}
-  activeErrorLines.clear();
-  renderGutterNow(true);
+  clearOutputPanel();
   updateGutter();
-  resetStates();
   if (document.activeElement && document.activeElement !== code && typeof document.activeElement.blur === "function") {
     document.activeElement.blur();
   }
@@ -2456,34 +2479,32 @@ if (btnNewProgram) {
 }
 
 sample.addEventListener("change", () => {
-  if (sample.value === "Custom program") {
+  if (sample.value === CUSTOM_PROGRAM_NAME) {
     const savedCustom = localStorage.getItem("zs_custom_code");
     code.value = savedCustom !== null ? savedCustom : "";
   } else {
     code.value = SAMPLES[sample.value];
   }
-  activeErrorLines.clear();
-  renderGutterNow(true);
+  clearOutputPanel();
   updateGutter();
-  resetStates();
   toast(`Loaded "${sample.value}"`);
 });
 
 // Restore autosaved code or default sample
 (function initEditorContent() {
-  const PRESET_VERSION = "8.0";
+  const PRESET_VERSION = "8.1";
   const storedVersion = localStorage.getItem("zs_version");
   const savedSample = localStorage.getItem("zs_autosave_sample");
   const savedCode = localStorage.getItem("zs_autosave_code");
   const savedCustom = localStorage.getItem("zs_custom_code");
 
   if (storedVersion !== PRESET_VERSION) {
-    // Migrate to version 8.0: bust stale autosaved code and load clean preset
+    // Migrate to version 8.1: bust stale autosaved code and load clean preset
     localStorage.setItem("zs_version", PRESET_VERSION);
     if (savedSample && SAMPLES[savedSample]) {
       sample.value = savedSample;
     }
-    if (sample.value === "Custom program") {
+    if (sample.value === CUSTOM_PROGRAM_NAME) {
       code.value = savedCustom !== null ? savedCustom : "";
     } else {
       code.value = SAMPLES[sample.value];
@@ -2493,7 +2514,7 @@ sample.addEventListener("change", () => {
     if (savedSample && SAMPLES[savedSample]) {
       sample.value = savedSample;
     }
-    if (sample.value === "Custom program") {
+    if (sample.value === CUSTOM_PROGRAM_NAME) {
       code.value = savedCode !== null ? savedCode : (savedCustom !== null ? savedCustom : "");
     } else {
       code.value = (savedCode && savedCode.trim().length > 0) ? savedCode : SAMPLES[sample.value];
@@ -2541,6 +2562,32 @@ async function runStage(stage) {
   state.selected = stage;
   $$(".stage").forEach((b) => b.classList.toggle("is-selected", b.dataset.stage === stage));
   resetStates();
+  if (!code.value || !code.value.trim()) {
+    setState(stage, "err");
+    const emptyErr = [{
+      line: 1,
+      col: 1,
+      message: "Source editor is empty — write ZynoScript statements ending with 'halt' before running."
+    }];
+    setEditorErrors(emptyErr);
+    const outTitle = $("#out-title");
+    const badge = $("#out-status");
+    const outputEl = $("#output");
+    if (outTitle) outTitle.textContent = STAGE_TITLE[stage];
+    if (badge) {
+      badge.hidden = false;
+      badge.className = "badge bad";
+      badge.textContent = "1 error";
+    }
+    if (outputEl) {
+      outputEl.innerHTML = `<div class="out-anim"><h3>Empty Program</h3>${errorList(emptyErr)}</div>`;
+      $$("button[data-line]", outputEl).forEach((b) => b.addEventListener("click", () => jumpToLine(+b.dataset.line)));
+    }
+    if (typeof btnCopyOutput !== "undefined" && btnCopyOutput) btnCopyOutput.hidden = false;
+    if (typeof btnClearOutput !== "undefined" && btnClearOutput) btnClearOutput.hidden = false;
+    toast("Editor is empty — write ZynoScript code before running");
+    return;
+  }
   const upto = STAGES.indexOf(stage);
   STAGES.forEach((s, i) => {
     if (i <= upto) setState(s, "running");
@@ -2954,6 +3001,7 @@ function renderGuide() {
   $("#gd-halt").textContent = `${k.HALT}`;
   $("#gd-decl1").textContent = `${k.LET} ${k.INT} a ${o.ASSIGN} 5`;
   $("#gd-decl2").textContent = `${k.LET} x ${o.ASSIGN} 5`;
+  if ($("#gd-neg")) $("#gd-neg").textContent = `${o.SUB || "-~"}`;
   if ($("#gd-cast")) $("#gd-cast").textContent = `x ${o.CAST || "as~"} ${k.INT}`;
 }
 
@@ -4063,6 +4111,9 @@ function generateLabReport() {
 }
 
 function exportLabReport() {
+  if (!code.value || !code.value.trim()) {
+    return toast("Editor is empty — write ZynoScript code before exporting a lab report");
+  }
   const md = generateLabReport();
   const sampleName = (sample.value || "zynoscript_program").toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
   const filename = `${sampleName}_lab_report.md`;

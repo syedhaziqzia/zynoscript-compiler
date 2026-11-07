@@ -95,7 +95,7 @@ Every stage lives in [`app/engines/`](app/engines/) as an independent pure Pytho
 | **02. Syntax** | `syntax.py` | Checks grammar rules and builds the program structure | Abstract Syntax Tree (JSON & ASCII tree) |
 | **03. Semantic** | `semantic.py` | Validates variable declarations, scopes, and data types | Symbol Table, scope hierarchy, type verification |
 | **04. ICG** | `icg.py` | Translates the tree into simple, step-by-step intermediate code | Three-Address Code (TAC), Quadruple table |
-| **05. VM Runtime** | `output.py` | Executes the intermediate instructions | Console output, runtime variables, steps executed |
+| **05. VM Runtime** | `output.py` | Executes the intermediate instructions | Console output, runtime variables, steps executed, execution latency (`ms`) |
 
 ---
 
@@ -105,9 +105,10 @@ Every valid ZynoScript program must conclude with `halt`:
 
 ```zynoscript
 /~~ ZynoScript Example:
-    Demonstrates loops, branching, comments, and explicit type casting (as~). ~~/
+    Demonstrates loops, branching, unary negation, comments, and explicit type casting (as~). ~~/
 let whole counter := 1
 let whole maxLimit := 5
+let whole offset := -~ 10
 
 spin (counter <<= maxLimit) {
     whenTrue (counter ~= 3) {
@@ -118,12 +119,14 @@ spin (counter <<= maxLimit) {
     counter := counter +~ 1
 }
 
+beam "Offset: " +~ (offset as~ phrase)
 beam "Execution complete."
 halt
 ```
 
 * **Data Types:** `whole` (int), `part` (float), `phrase` (str), `flag` (bool), `mark` (char)
 * **Explicit Type Casting (`as~`):** `x as~ whole`, `x as~ part`, `x as~ phrase`, `x as~ flag`, `x as~ mark` (customizable via the `CAST` operator role)
+* **Unary Negation (`-~`):** Negates numeric (`whole` and `part`) expressions, e.g. `let whole a := -~ 5`, `beam -~ (a +~ 2)`
 * **Comments:** Single-line `// ...` and multi-line block comments `/~~ ... ~~/`
 * **Conditions & Loops:** `whenTrue (condition) { ... } elseWay { ... }`, `spin (condition) { ... }`
 * **Operators:** `+~` (Math & `phrase` concatenation), `-~`, `*~`, `/~` | `=>>`, `<<=`, `~=`, `~!` (Comparison) | `&&~`, `||~`, `!~` (Logical)
@@ -134,11 +137,15 @@ halt
 ## ✨ Studio Workbench Highlights
 
 * **Light & Dark Mode Theme Toggle:** Switch seamlessly between crisp **Light Mode** and full-studio **Dark Mode** (`html[data-theme="dark"]`) from the top navigation bar, persisted automatically in `localStorage`.
+* **Custom Program Canvas (`+ New`) & Autosave:** Start a blank custom program directly from the editor header (`+ New` button or `"Custom program"` preset) to write code from scratch, with automatic draft persistence in `localStorage`.
+* **Editor Font Zoom Controls (`A-` / `A+`):** Adjust source editor font size (`13px` to `18px`) directly from the editor header bar for comfortable reading and classroom projector displays.
+* **One-Click Lab Report Export:** Download a formatted Markdown report from the top navigation bar containing the source program, token stream (Stage 01), ASCII syntax tree (Stage 02), verified symbol table (Stage 03), Three-Address Code & quadruple table (Stage 04), and program output (Stage 05).
+* **Execution Latency Telemetry Badge:** Stage 05 displays real-time execution latency (`ms`) alongside instruction step counts.
 * **Live Custom-Grammar Syntax Highlighting:** Colorizes keywords, data types, booleans, operators, numbers, strings, and comments in real time—automatically adapting when you rename any keyword or operator in the Grammar Drawer.
-* **Shortcuts & Quick Actions Hub (`?`):** One-click topbar modal combining keyboard shortcut references (`Ctrl+Enter`, `Ctrl+K`, `Tab`, `?`, `Esc`), mouse tips, and instant studio triggers.
+* **Shortcuts & Quick Actions Hub (`?` & `Ctrl+K`):** One-click topbar modal and command palette combining keyboard shortcut references (`Ctrl+Enter`, `Ctrl+K`, `Tab`, `?`, `Esc`), mouse tips, and instant studio triggers.
 * **Inline Error Diagnostics & Gutter Jump:** Highlights offending lines in the editor gutter and displays clean diagnostic rows that jump straight to the exact source line on click.
 * **Resizable Desktop Split & Mobile Workbench Tabs:** Drag the center divider on desktop to resize the editor/output split (double-click to reset 50/50), or switch cleanly between `Code Editor` and `Compiler Output` tabs on mobile screens.
-* **26 Built-In Preset Programs:** Includes **22 working programs** (star pyramids, diamond patterns, prime checker, palindrome, FizzBuzz, Euclidean GCD/LCM, Collatz `3n+1`, binary converter, ASCII Caesar cipher, type casting, and grade calculator) plus **4 dedicated stage error presets** (`Lexical errors`, `Syntax error: incomplete statement`, `Semantic errors`, and `Runtime error: division by zero`).
+* **Built-In Preset Programs:** Includes working algorithm presets (star pyramids, diamond patterns, prime checker, palindrome, FizzBuzz, Euclidean GCD/LCM, Collatz `3n+1`, binary converter, ASCII Caesar cipher, type casting, and grade calculator), a dedicated custom program workspace, and 4 stage error presets (`Lexical errors`, `Syntax error: incomplete statement`, `Semantic errors`, and `Runtime error: division by zero`).
 
 ---
 
@@ -220,7 +227,7 @@ This repository includes [`vercel.json`](vercel.json) ready for deployment with 
 
 ## 🧪 Running the Test Suite
 
-Run the automated integration, parity, and unit test suite (**48 tests** covering all 5 compiler engines, browser-vs-server compiler parity across all 26 presets, `as~` type casting, `/~~ ... ~~/` block comments, authentication, rate limiting, and permission boundaries):
+Run the automated integration, parity, and unit test suite (**55 tests** covering all 5 compiler engines, browser-vs-server compiler parity across all presets, unary negation (`-~`), `as~` type casting, `/~~ ... ~~/` block comments, authentication, rate limiting, and permission boundaries):
 
 ```bash
 python -m unittest discover tests
@@ -250,7 +257,7 @@ zynoscript-compiler/
 ├── api/
 │   └── index.py                 # Vercel serverless function entry point
 ├── public/                      # Static studio frontend (HTML, CSS, JS, Assets)
-├── tests/                       # 40 automated unit & integration tests
+├── tests/                       # 55 automated unit & integration tests
 ├── data/                        # Local SQLite database directory
 ├── .env.example                 # Configuration template
 ├── vercel.json                  # Vercel routing configuration
