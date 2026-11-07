@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=7.0">
+  <link rel="stylesheet" href="css/style.css?v=7.1">
   <script>
     const hasAuthToken = localStorage.getItem("zs_token") || sessionStorage.getItem("zs_token");
     if (!hasAuthToken) {
@@ -36,6 +36,9 @@
       </nav>
     </div>
     <div class="topbar-right">
+      <button id="btn-export-report" class="topbar-icon-btn" type="button" title="Export Lab Report (All 5 Stages)" aria-label="Export Lab Report" hidden>
+        <span data-icon="download"></span>
+      </button>
       <button id="btn-shortcuts-help" class="topbar-icon-btn" type="button" title="Shortcuts & Quick Actions (?)" aria-label="Shortcuts and Quick Actions" hidden>
         <span data-icon="keyboard"></span>
       </button>
@@ -154,6 +157,11 @@
         <header class="pane-header">
           <div class="pane-header-left">
             <h2 class="pane-title">Source Code</h2>
+            <div class="editor-zoom-controls" id="editor-zoom-controls" role="group" aria-label="Editor Font Size">
+              <button type="button" class="zoom-btn" id="btn-zoom-out" title="Decrease Font Size (A-)" aria-label="Decrease Font Size">A-</button>
+              <span id="zoom-level" class="zoom-level mono">13px</span>
+              <button type="button" class="zoom-btn" id="btn-zoom-in" title="Increase Font Size (A+)" aria-label="Increase Font Size">A+</button>
+            </div>
           </div>
           <div class="pane-header-right">
             <div class="inline-select">
@@ -624,9 +632,9 @@ let flag ok := 1 as~ flag              // 1 -> true</pre>
   <div id="toast" class="toast" role="status" hidden></div>
 
   <!-- Scripts -->
-  <script defer src="js/icons.js?v=7.0"></script>
-  <script defer src="js/samples.js?v=7.0"></script>
-  <script defer src="js/api.js?v=7.0"></script>
-  <script defer src="js/app.js?v=7.0"></script>
+  <script defer src="js/icons.js?v=7.1"></script>
+  <script defer src="js/samples.js?v=7.1"></script>
+  <script defer src="js/api.js?v=7.1"></script>
+  <script defer src="js/app.js?v=7.1"></script>
 </body>
 </html>

@@ -1185,6 +1185,7 @@ async function enterApp(user) {
   if (topbar) topbar.hidden = false;
   $("#nav").hidden = $("#whoami").hidden = false;
   if ($("#cmd-trigger")) $("#cmd-trigger").hidden = false;
+  if ($("#btn-export-report")) $("#btn-export-report").hidden = false;
   if ($("#btn-shortcuts-help")) $("#btn-shortcuts-help").hidden = false;
   if ($("#btn-theme-toggle")) $("#btn-theme-toggle").hidden = false;
   $("#nav-admin").hidden = $("#log-user").hidden = !isAdmin;
@@ -1222,6 +1223,7 @@ function leaveApp(message) {
   if (topbar) topbar.hidden = true;
   $("#nav").hidden = $("#whoami").hidden = true;
   if ($("#cmd-trigger")) $("#cmd-trigger").hidden = true;
+  if ($("#btn-export-report")) $("#btn-export-report").hidden = true;
   if ($("#btn-shortcuts-help")) $("#btn-shortcuts-help").hidden = true;
   if ($("#btn-theme-toggle")) $("#btn-theme-toggle").hidden = true;
   $("#nav-admin").hidden = $("#log-user").hidden = true;
@@ -2511,9 +2513,12 @@ async function runStage(stage) {
   }
 
   try {
+    const t0 = performance.now();
     if (code.value.length <= 10000 && typeof compileLocal === "function") {
       const activeGrammar = (state.grammar && state.grammar.grammar) ? state.grammar.grammar : ZS_DEFAULT_GRAMMAR;
       const res = compileLocal(stage, code.value, activeGrammar);
+      const elapsed = (performance.now() - t0).toFixed(1);
+      if (res && res.results && res.results.output) res.results.output.elapsedMs = elapsed;
       compileCache.set(cacheKey, res);
       if (compileCache.size > 50) compileCache.delete(compileCache.keys().next().value);
       state.lastResults = res;
@@ -2523,6 +2528,8 @@ async function runStage(stage) {
       return;
     }
     const res = await Api.post(`/api/compile/${stage}`, { source: code.value });
+    const elapsed = (performance.now() - t0).toFixed(1);
+    if (res && res.results && res.results.output) res.results.output.elapsedMs = elapsed;
     compileCache.set(cacheKey, res);
     if (compileCache.size > 50) compileCache.delete(compileCache.keys().next().value);
     state.lastResults = res;
@@ -2595,7 +2602,8 @@ const RENDER = {
   },
 
   output: (r) => {
-    return (r.ok ? okBanner(`Execution finished in ${r.steps} step(s)`) : `<h3>Runtime Error</h3>` + errorList(r.errors)) +
+    const latencyBadge = r.elapsedMs !== undefined ? ` · <span class="badge latency-badge" title="Execution Latency">⚡ ${r.elapsedMs} ms</span>` : "";
+    return (r.ok ? okBanner(`Execution finished in ${r.steps} step(s)${latencyBadge}`) : `<h3>Runtime Error</h3>` + errorList(r.errors)) +
       `<h3>Program Console (Printed Lines)</h3><pre class="console">${esc(r.output.length ? r.output.join("\n") : "(no output produced)")}</pre>` +
       `<h3>Final Variable State</h3>` + (r.variables.length ? table(["Variable", "Value"], r.variables.map((v) => [v.name, v.value]), [1]) : `<p class="empty text-muted">No active variables.</p>`);
   },
@@ -3443,6 +3451,14 @@ function getCommands() {
 
     // Tools & Utilities
     {
+      id: "tool-export-report",
+      group: "Tools",
+      name: "Export Lab Report (All 5 Stages)",
+      desc: "Download full compiler lab report in Markdown format and copy to clipboard",
+      icon: "download",
+      action: () => exportLabReport(),
+    },
+    {
       id: "tool-copy",
       group: "Tools",
       name: "Copy Compiler Output",
@@ -3787,6 +3803,224 @@ if (mobFabRun) {
     }
     runStage("output");
   });
+}
+
+/* =========================================
+   EDITOR FONT ZOOM CONTROLS (13px -> 18px)
+   ========================================= */
+const ZOOM_SIZES = [13, 14, 15, 16, 17, 18];
+let currentEditorZoom = parseInt(localStorage.getItem("zs_editor_zoom") || "13", 10);
+if (!ZOOM_SIZES.includes(currentEditorZoom)) currentEditorZoom = 13;
+
+function applyEditorZoom(size) {
+  currentEditorZoom = size;
+  const box = $("#code-editor-box");
+  if (box) box.style.setProperty("--editor-font-size", `${size}px`);
+  const lbl = $("#zoom-level");
+  if (lbl) lbl.textContent = `${size}px`;
+  const btnOut = $("#btn-zoom-out");
+  const btnIn = $("#btn-zoom-in");
+  if (btnOut) btnOut.disabled = currentEditorZoom <= ZOOM_SIZES[0];
+  if (btnIn) btnIn.disabled = currentEditorZoom >= ZOOM_SIZES[ZOOM_SIZES.length - 1];
+  try {
+    localStorage.setItem("zs_editor_zoom", String(size));
+  } catch {}
+  if (typeof updateGutter === "function") updateGutter();
+  if (typeof updateSyntaxHighlight === "function") updateSyntaxHighlight();
+}
+
+const btnZoomOut = $("#btn-zoom-out");
+const btnZoomIn = $("#btn-zoom-in");
+if (btnZoomOut) {
+  btnZoomOut.addEventListener("click", () => {
+    const idx = ZOOM_SIZES.indexOf(currentEditorZoom);
+    if (idx > 0) applyEditorZoom(ZOOM_SIZES[idx - 1]);
+  });
+}
+if (btnZoomIn) {
+  btnZoomIn.addEventListener("click", () => {
+    const idx = ZOOM_SIZES.indexOf(currentEditorZoom);
+    if (idx < ZOOM_SIZES.length - 1) applyEditorZoom(ZOOM_SIZES[idx + 1]);
+  });
+}
+applyEditorZoom(currentEditorZoom);
+
+/* =========================================
+   ONE-CLICK LAB REPORT EXPORT (ALL 5 STAGES)
+   ========================================= */
+function generateLabReport() {
+  const activeGrammar = (state.grammar && state.grammar.grammar) ? state.grammar.grammar : ZS_DEFAULT_GRAMMAR;
+  const res = (typeof compileLocal === "function")
+    ? compileLocal("output", code.value, activeGrammar)
+    : (state.lastResults || {});
+
+  const sampleName = sample.value || "Custom Program";
+  const now = new Date().toLocaleString();
+  const stages = (res && res.results) || {};
+
+  let md = `# ZynoScript Compiler Construction Lab Report\n\n`;
+  md += `**Course:** CS-554: Compiler Construction  \n`;
+  md += `**Generated:** ${now}  \n`;
+  md += `**Program:** ${sampleName}  \n\n`;
+  md += `---\n\n`;
+  md += `## 1. Source Program\n\n`;
+  md += `\`\`\`zynoscript\n${code.value.trim()}\n\`\`\`\n\n`;
+  md += `---\n\n`;
+
+  // Stage 01: Lexical
+  const lex = stages.lexical;
+  md += `## 2. Stage 01: Lexical Analysis\n\n`;
+  if (lex) {
+    md += `**Status:** ${lex.ok ? "Passed (No Lexical Errors)" : "Errors Encountered"}  \n`;
+    md += `**Total Tokens:** ${lex.count || (lex.tokens ? lex.tokens.length : 0)}  \n\n`;
+    if (lex.errors && lex.errors.length) {
+      md += `### Lexical Errors:\n`;
+      lex.errors.forEach((e) => { md += `- Line ${e.line}, Col ${e.col}: ${e.message}\n`; });
+      md += `\n`;
+    }
+    if (lex.categories && lex.categories.length) {
+      md += `### Token Categories:\n\n`;
+      md += `| Category | Count | Sample Lexemes |\n`;
+      md += `|:---|:---:|:---|\n`;
+      lex.categories.forEach((c) => {
+        md += `| ${c.category} | ${c.count} | \`${(c.lexemes || []).slice(0, 5).join("`, `")}\` |\n`;
+      });
+      md += `\n`;
+    }
+    if (lex.tokens && lex.tokens.length) {
+      md += `### Token Stream:\n\n`;
+      md += `| # | Line | Category | Lexeme |\n`;
+      md += `|:---:|:---:|:---|:---|\n`;
+      lex.tokens.forEach((t, i) => {
+        md += `| ${i + 1} | ${t.line} | ${t.kind} | \`${t.lexeme}\` |\n`;
+      });
+      md += `\n`;
+    }
+  } else {
+    md += `*Not executed.*\n\n`;
+  }
+  md += `---\n\n`;
+
+  // Stage 02: Syntax
+  const syn = stages.syntax;
+  md += `## 3. Stage 02: Syntax Analysis\n\n`;
+  if (syn) {
+    md += `**Status:** ${syn.ok ? "Passed (Parse Tree Validated)" : "Syntax Errors Encountered"}  \n\n`;
+    if (syn.errors && syn.errors.length) {
+      md += `### Syntax Errors:\n`;
+      syn.errors.forEach((e) => { md += `- Line ${e.line}: ${e.message}\n`; });
+      md += `\n`;
+    }
+    if (syn.tree) {
+      md += `### Abstract Syntax Tree (AST):\n\n`;
+      md += `\`\`\`text\n${syn.tree}\n\`\`\`\n\n`;
+    }
+  } else {
+    md += `*Not executed.*\n\n`;
+  }
+  md += `---\n\n`;
+
+  // Stage 03: Semantic
+  const sem = stages.semantic;
+  md += `## 4. Stage 03: Semantic Analysis\n\n`;
+  if (sem) {
+    md += `**Status:** ${sem.ok ? "Passed (Type and Scope Rules Validated)" : "Semantic Errors Encountered"}  \n\n`;
+    if (sem.errors && sem.errors.length) {
+      md += `### Semantic Errors:\n`;
+      sem.errors.forEach((e) => { md += `- Line ${e.line} (Rule ${e.rule}): ${e.message}\n`; });
+      md += `\n`;
+    }
+    if (sem.symbols && sem.symbols.length) {
+      md += `### Verified Symbol Table:\n\n`;
+      md += `| Variable Name | Data Type | Declared Line |\n`;
+      md += `|:---|:---|:---:|\n`;
+      sem.symbols.forEach((s) => {
+        md += `| \`${s.name}\` | \`${s.type}\` | ${s.line} |\n`;
+      });
+      md += `\n`;
+    }
+  } else {
+    md += `*Not executed.*\n\n`;
+  }
+  md += `---\n\n`;
+
+  // Stage 04: ICG
+  const ir = stages.icg;
+  md += `## 5. Stage 04: Intermediate Code Generation (ICG)\n\n`;
+  if (ir) {
+    md += `**Status:** ${ir.ok ? "Passed" : "Errors Encountered"}  \n\n`;
+    if (ir.tac && ir.tac.length) {
+      md += `### Three-Address Code (TAC):\n\n`;
+      md += `\`\`\`text\n${ir.tac.join("\n")}\n\`\`\`\n\n`;
+    }
+    if (ir.quads && ir.quads.length) {
+      md += `### Quadruples Table:\n\n`;
+      md += `| # | Operator | Arg 1 | Arg 2 | Result |\n`;
+      md += `|:---:|:---:|:---:|:---:|:---:|\n`;
+      ir.quads.forEach((q, i) => {
+        md += `| ${i} | \`${q.op}\` | \`${q.arg1 || ""}\` | \`${q.arg2 || ""}\` | \`${q.result || ""}\` |\n`;
+      });
+      md += `\n`;
+    }
+  } else {
+    md += `*Not executed.*\n\n`;
+  }
+  md += `---\n\n`;
+
+  // Stage 05: Output
+  const out = stages.output;
+  md += `## 6. Stage 05: Output Execution & VM Runtime\n\n`;
+  if (out) {
+    md += `**Status:** ${out.ok ? "Passed (Execution Finished)" : "Runtime Error"}  \n`;
+    md += `**Execution Steps:** ${out.steps || 0}  \n`;
+    if (out.elapsedMs) md += `**Execution Latency:** ${out.elapsedMs} ms  \n`;
+    md += `\n`;
+    if (out.errors && out.errors.length) {
+      md += `### Runtime Errors:\n`;
+      out.errors.forEach((e) => { md += `- Line ${e.line}: ${e.message}\n`; });
+      md += `\n`;
+    }
+    md += `### Program Console Output:\n\n`;
+    md += `\`\`\`text\n${out.output && out.output.length ? out.output.join("\n") : "(no output produced)"}\n\`\`\`\n\n`;
+    if (out.variables && out.variables.length) {
+      md += `### Final Variable State:\n\n`;
+      md += `| Variable Name | Final Value |\n`;
+      md += `|:---|:---|\n`;
+      out.variables.forEach((v) => {
+        md += `| \`${v.name}\` | \`${v.value}\` |\n`;
+      });
+      md += `\n`;
+    }
+  } else {
+    md += `*Not executed.*\n\n`;
+  }
+  return md;
+}
+
+function exportLabReport() {
+  const md = generateLabReport();
+  const sampleName = (sample.value || "zynoscript_program").toLowerCase().replace(/[^a-z0-9_-]+/g, "_");
+  const filename = `${sampleName}_lab_report.md`;
+
+  const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(md).catch(() => {});
+  }
+  toast(`Lab report downloaded as "${filename}" & copied to clipboard!`);
+}
+
+const btnExportReport = $("#btn-export-report");
+if (btnExportReport) {
+  btnExportReport.addEventListener("click", () => exportLabReport());
 }
 
 

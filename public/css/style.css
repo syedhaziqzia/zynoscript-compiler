@@ -3404,7 +3404,9 @@ html[data-theme="dark"] .icon-pill-btn:focus-visible {
 .code-stage-wrap .code-textarea {
   margin: 0;
   padding: 14px 16px;
-  font: 13px/1.65 var(--font-mono);
+  font-size: var(--editor-font-size, 13px);
+  line-height: 1.65;
+  font-family: var(--font-mono);
   tab-size: 4;
   white-space: pre;
   overflow: auto;
@@ -3462,6 +3464,9 @@ html[data-theme="dark"] .icon-pill-btn:focus-visible {
   align-items: stretch;
   padding: 14px 8px 14px 10px;
   min-width: 44px;
+  font-size: var(--editor-font-size, 13px);
+  line-height: 1.65;
+  font-family: var(--font-mono);
 }
 
 .gutter-line {
@@ -3848,6 +3853,89 @@ html[data-theme="dark"] .grammar-card-input:focus,
 html[data-theme="dark"] .admin-search-input:focus {
   background: var(--bg-subtle);
   color: var(--ink);
+}
+
+/* 5. Editor Font Zoom Controls */
+.pane-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.editor-zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: var(--r-full, 9999px);
+  padding: 2px 4px;
+}
+
+html[data-theme="dark"] .editor-zoom-controls {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.zoom-btn {
+  background: transparent;
+  border: none;
+  color: var(--ink-secondary, #64748b);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  line-height: 1.2;
+}
+
+.zoom-btn:hover:not(:disabled) {
+  color: var(--ink, #0f172a);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+html[data-theme="dark"] .zoom-btn:hover:not(:disabled) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.zoom-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.zoom-level {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted, #94a3b8);
+  padding: 0 4px;
+  min-width: 32px;
+  text-align: center;
+  user-select: none;
+}
+
+/* 6. Execution Latency Badge */
+.badge.latency-badge {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0284c7;
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  vertical-align: middle;
+}
+
+html[data-theme="dark"] .badge.latency-badge {
+  background: rgba(56, 189, 248, 0.16);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.38);
 }
 
 
