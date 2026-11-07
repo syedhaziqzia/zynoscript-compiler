@@ -2408,12 +2408,25 @@ sample.addEventListener("change", () => {
 
 // Restore autosaved code or default sample
 (function initEditorContent() {
+  const PRESET_VERSION = "7.0";
+  const storedVersion = localStorage.getItem("zs_version");
   const savedSample = localStorage.getItem("zs_autosave_sample");
   const savedCode = localStorage.getItem("zs_autosave_code");
-  if (savedSample && SAMPLES[savedSample]) {
-    sample.value = savedSample;
+
+  if (storedVersion !== PRESET_VERSION) {
+    // Migrate to version 7.0: bust stale autosaved code and load clean preset
+    localStorage.setItem("zs_version", PRESET_VERSION);
+    if (savedSample && SAMPLES[savedSample]) {
+      sample.value = savedSample;
+    }
+    code.value = SAMPLES[sample.value];
+    localStorage.setItem("zs_autosave_code", code.value);
+  } else {
+    if (savedSample && SAMPLES[savedSample]) {
+      sample.value = savedSample;
+    }
+    code.value = (savedCode && savedCode.trim().length > 0) ? savedCode : SAMPLES[sample.value];
   }
-  code.value = (savedCode && savedCode.trim().length > 0) ? savedCode : SAMPLES[sample.value];
   renderGutterNow(true);
   updateSyntaxHighlight();
 })();

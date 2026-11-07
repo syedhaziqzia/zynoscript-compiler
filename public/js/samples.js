@@ -338,7 +338,7 @@ beam "LCM of 48 and 18: " +~ (lcm as~ phrase)
 halt
 `,
   "Collatz 3n+1 sequence": `/~~ Collatz Hailstone Conjecture
-    If even: n = n / 2; if odd: n = 3n + 1 until n reaches 1. ~~/
+    If even: n = n / 2, if odd: n = 3n + 1 until n reaches 1. ~~/
 let whole n := 19
 let whole steps := 0
 beam "Starting Collatz at: " +~ (n as~ phrase)
