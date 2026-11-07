@@ -31,6 +31,10 @@
 
 This project was developed for **CS-554: Compiler Construction**:
 
+* **Compiler Engine & Core Grammar Lead:**  
+  👉 **[Syed Abdul Ali Naqvi](https://github.com/SyedAbdulAliNaqvi)**  
+  Developed core compiler stages, lexical tokenization, recursive-descent syntax parsing, semantic verification rules, Intermediate Code Generation (Three-Address Code & Quadruple tables), and language specifications.
+
 * **Team Lead & Full-Stack Architect:**  
   👉 **[Syed Haziq Zia Naqvi](https://github.com/syedhaziqzia)**  
   Overall project leadership, backend architecture & REST APIs, cloud database systems (dual SQLite / Neon PostgreSQL), security hardening, interactive laboratory workbench UI/UX, and Vercel cloud deployment.
@@ -38,10 +42,6 @@ This project was developed for **CS-554: Compiler Construction**:
 * **Quality Assurance & Verification Specialist:**  
   👉 **[Muhammad Noman](https://github.com/Noman-exe)**  
   Conducted pipeline testing, cross-stage integration verification, syntax error boundary checks, and test suite execution to ensure compiler stability and compliance.
-
-* **Compiler Engine & Core Grammar Lead:**  
-  👉 **[Syed Abdul Ali Naqvi](https://github.com/SyedAbdulAliNaqvi)**  
-  Developed core compiler stages, lexical tokenization, recursive-descent syntax parsing, semantic verification rules, Intermediate Code Generation (Three-Address Code & Quadruple tables), and language specifications.
 
 ---
 
