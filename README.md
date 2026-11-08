@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/assets/Zynoscript-Logo.jpg" alt="ZynoScript Logo" width="120" style="border-radius: 16px; margin-bottom: 8px;"/>
+  <img src="public/assets/Zynoscript-Logo.jpg" alt="ZynoScript Logo" width="96" style="border-radius: 20px; border: 2px solid #09090b; margin-bottom: 8px;"/>
 </p>
 
 <h1 align="center">ZynoScript Compiler Studio</h1>
