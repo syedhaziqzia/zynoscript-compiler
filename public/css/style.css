@@ -1840,6 +1840,8 @@ dialog {
   padding: 24px;
   width: min(400px, 90vw);
   box-shadow: var(--shadow-lg);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 dialog::backdrop {
