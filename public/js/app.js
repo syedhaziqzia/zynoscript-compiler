@@ -2824,6 +2824,22 @@ $("#log-filter").innerHTML += ACTIONS.map((a) => `<option value="${a}">${a.repla
 enhanceSelect($("#log-filter"));
 enhanceSelect($("#log-user"));
 
+function formatLocalTime(dateInput) {
+  if (!dateInput) return "";
+  const iso = /[zZ]|[+-]\d\d:?\d\d$/.test(dateInput) ? dateInput : dateInput.replace(" ", "T") + "Z";
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return dateInput;
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+}
+
 function timeAgo(dateInput) {
   if (!dateInput) return "";
   // The server stores UTC as "YYYY-MM-DD HH:MM:SS" with no zone; parse it as UTC, not local time.
@@ -2889,6 +2905,7 @@ async function loadLogs() {
       const isOk = l.status === "ok";
       const shortHash = l.program_hash ? l.program_hash.slice(0, 7) : "";
       const time = timeAgo(l.created_at);
+      const localTime = formatLocalTime(l.created_at);
 
       return `
         <div class="feed-item" style="--i:${Math.min(idx, 14)}" tabindex="0" role="button" aria-expanded="false">
@@ -2896,7 +2913,7 @@ async function loadLogs() {
             <span class="feed-dot ${isOk ? 'ok' : 'error'}" title="${isOk ? 'Success' : 'Error'}"></span>
             <div class="feed-content">
               <div class="feed-summary">${formatActionPhrase(l)}</div>
-              <div class="feed-time" title="${esc(l.created_at)}">${time} · ${esc(l.created_at)}</div>
+              <div class="feed-time" title="${esc(localTime)}">${time} · ${esc(localTime)}</div>
             </div>
           </div>
           <div class="feed-right">
@@ -2906,7 +2923,7 @@ async function loadLogs() {
           <div class="feed-details" hidden>
             <div class="feed-detail-row">
               <span class="feed-detail-label">Full Timestamp:</span>
-              <span class="feed-detail-value">${esc(l.created_at)}</span>
+              <span class="feed-detail-value">${esc(localTime)}</span>
             </div>
             <div class="feed-detail-row">
               <span class="feed-detail-label">Status:</span>
@@ -3102,9 +3119,9 @@ function renderUsersTable() {
     return `<tr>
       <td><strong>${esc(u.username)}</strong>${me ? ' <span class="muted text-small">(you)</span>' : ""}</td>
       <td><span class="badge ${u.role === 'admin' ? 'ok' : ''}">${esc(u.role)}</span></td>
-      <td class="mono text-muted text-small">${esc(u.created_at)}</td>
+      <td class="mono text-muted text-small">${esc(formatLocalTime(u.created_at))}</td>
       <td class="mono"><strong>${u.runs}</strong></td>
-      <td class="text-small">${esc(u.last_active || "never")}</td>
+      <td class="text-small">${esc(u.last_active ? formatLocalTime(u.last_active) : "never")}</td>
       <td>${customGrammarBadge}</td>
       <td>
         <div class="cell-actions">
